@@ -135,6 +135,14 @@
     .modalActions button { border:0; border-radius:16px; height:45px; padding:0 18px; font-weight:950; cursor:pointer; }
     .cancel { background:var(--soft); }
     .ok { background:var(--accent); color:white; }
+    .schoolResults { margin-top:14px; overflow:auto; display:grid; gap:8px; padding-right:4px; }
+    .schoolResult { border:1px solid var(--line); background:var(--card2); border-radius:18px; padding:12px 14px; text-align:left; cursor:pointer; }
+    .schoolResult:hover { box-shadow:0 0 0 4px var(--accent2) inset; }
+    .schoolName { font-size:21px; font-weight:950; }
+    .schoolMeta { margin-top:5px; color:var(--muted); font-size:15px; font-weight:850; line-height:1.35; }
+    .flowTime { display:grid; grid-template-columns:1fr 1fr; gap:4px; }
+    .flowTime input { width:100%; border:0; outline:0; border-radius:9px; background:rgba(255,255,255,.72); padding:3px 2px; text-align:center; color:var(--muted); font-size:14px; font-weight:950; }
+    body[data-dark="true"] .flowTime input { background:rgba(255,255,255,.08); }
     .capture .toolbar, .capture .miniBtn, .capture .trash, .capture .addTask { display:none !important; }
   </style>
 </head>
@@ -142,7 +150,7 @@
   <div class="viewport">
     <div class="board" id="board">
       <header class="topbar card">
-        <input id="titleInput" class="titleInput" value="용기 뿜뿜 통합교육1반" aria-label="우리 반 이름">
+        <input id="titleInput" class="titleInput" value="용기 뿜뿜 통합교육1반" placeholder="교실 이름을 입력하세요" aria-label="교실 이름">
         <div class="toolbar">
           <div class="pillbox">
             <button class="dot pink" data-theme="pink" title="분홍"></button>
@@ -162,14 +170,14 @@
         <section class="left">
           <article class="card">
             <div class="card-inner">
-              <div class="head"><div class="h">주간 시간표</div><div class="sub">과목 클릭해서 수정</div></div>
+              <div class="head"><div class="h">주간 시간표</div><div class="sub">과목 칸에 작성하세요</div></div>
               <div class="timetable" id="timetable"></div>
             </div>
           </article>
           <article class="card bookCard">
             <div class="bookBox">
               <div class="bookLabel">📚 오늘의 동화책:</div>
-              <input id="bookInput" class="bookInput" value="빙글빙글" placeholder="책 제목 입력" aria-label="오늘의 동화책 제목">
+              <input id="bookInput" class="bookInput" value="" placeholder="오늘 읽을 동화책을 입력하세요" aria-label="오늘의 동화책">
             </div>
           </article>
           <section class="bottom">
@@ -188,11 +196,11 @@
 
         <section class="center">
           <article class="card"><div class="card-inner">
-            <div class="head"><div class="h">오늘의 흐름</div><div class="sub" id="weekdayText">-</div></div>
+            <div class="head"><div class="h">오늘의 흐름</div><div class="sub" id="weekdayText">시간 직접 수정 가능</div></div>
             <div class="flowList" id="flowList"></div>
           </div></article>
           <article class="card"><div class="card-inner">
-            <div class="head"><div class="h">오늘의 급식</div><button class="miniBtn" id="schoolBtn">학교 설정</button></div>
+            <div class="head"><div class="h">오늘의 급식</div><button class="miniBtn" id="schoolBtn">학교 검색</button></div>
             <div class="mealList" id="mealList"><div class="mealEmpty">급식 정보를 불러오는 중</div></div>
           </div></article>
         </section>
@@ -200,7 +208,7 @@
         <section class="right">
           <article class="nowBox"><div class="nowLabel">지금은</div><div class="nowTitle" id="nowTitle">수업 전후</div><div class="nowSub" id="nowSub">다음 활동을 준비해요</div></article>
           <article class="card"><div class="card-inner">
-            <div class="head"><div class="h">오늘의 할 일</div><div class="sub">체크 가능</div></div>
+            <div class="head"><div class="h">오늘의 할 일</div><div class="sub">작성하세요</div></div>
             <div class="taskList" id="taskList"></div>
             <button class="addTask" id="addTaskBtn">+ 할 일 추가</button>
           </div></article>
@@ -217,24 +225,33 @@
       <div class="modalActions"><button class="cancel" data-close-modal>취소</button><button class="ok" id="regionOk">적용</button></div>
     </div>
   </div>
+  <div class="modalBackdrop" id="schoolModal">
+    <div class="modal">
+      <h2>급식 학교 검색</h2>
+      <p>같은 이름의 학교가 여러 개 나오면 지역, 교육청, 주소를 보고 원하는 학교를 클릭하세요.</p>
+      <input id="schoolInput" placeholder="예: 도암초등학교">
+      <div class="modalActions"><button class="cancel" data-close-modal>닫기</button><button class="ok" id="schoolSearchBtn">검색</button></div>
+      <div class="schoolResults" id="schoolResults"></div>
+    </div>
+  </div>
 
   <script>
     const DESIGN_W = 1600;
     const DESIGN_H = 900;
-    const STORAGE = "smart_class_board_netlify_v2";
+    const STORAGE = "smart_class_board_settings_v3";
     const DAYS = [["mon","월"],["tue","화"],["wed","수"],["thu","목"],["fri","금"]];
-    const SLOTS = [
-      {s:"08:30", e:"09:00", type:"event", label:"아침자습", sub:"차분히 준비"},
+    const DEFAULT_SLOTS = [
+      {s:"08:40", e:"09:00", type:"event", label:"아침활동", sub:"차분히 준비"},
       {s:"09:00", e:"09:40", type:"period", p:1},
-      {s:"09:40", e:"09:50", type:"event", label:"쉬는시간", sub:"물 마시기"},
-      {s:"09:50", e:"10:30", type:"period", p:2},
-      {s:"10:30", e:"10:40", type:"event", label:"쉬는시간", sub:"다음 수업 준비"},
-      {s:"10:40", e:"11:20", type:"period", p:3},
-      {s:"11:20", e:"11:30", type:"event", label:"쉬는시간", sub:"화장실 다녀오기"},
-      {s:"11:30", e:"12:10", type:"period", p:4},
-      {s:"12:10", e:"13:00", type:"event", label:"점심시간", sub:"맛있게 먹기"},
-      {s:"13:00", e:"13:40", type:"period", p:5},
-      {s:"13:50", e:"14:30", type:"period", p:6}
+      {s:"09:40", e:"09:45", type:"event", label:"쉬는시간", sub:"물 마시기"},
+      {s:"09:45", e:"10:25", type:"period", p:2},
+      {s:"10:25", e:"10:30", type:"event", label:"쉬는시간", sub:"다음 수업 준비"},
+      {s:"10:30", e:"11:10", type:"period", p:3},
+      {s:"11:10", e:"11:15", type:"event", label:"쉬는시간", sub:"화장실 다녀오기"},
+      {s:"11:15", e:"11:55", type:"period", p:4},
+      {s:"11:55", e:"12:55", type:"event", label:"점심시간", sub:"맛있게 먹기"},
+      {s:"12:55", e:"13:35", type:"period", p:5},
+      {s:"13:40", e:"14:20", type:"period", p:6}
     ];
     const REGIONS = [
       {name:"이천", lat:37.2723, lon:127.4350},
@@ -258,17 +275,18 @@
       theme:"orange",
       dark:false,
       big:false,
-      book:"빙글빙글",
+      book:"",
       location:{name:"이천", lat:37.2723, lon:127.4350},
       school:{name:"도암초등학교", office:"J10", code:"7530074"},
+      slots: DEFAULT_SLOTS,
       timetable:{
-        mon:["국어","수학","통합","미술","창체","정리"],
-        tue:["수학","국어","체육","통합","음악","독서"],
-        wed:["통합","수학","국어","영어","미술","창체"],
-        thu:["국어","통합","수학","체육","안전","정리"],
-        fri:["음악","국어","통합","수학","동아리","정리"]
+        mon:["국어","수학","통합","미술","창체",""],
+        tue:["수학","국어","체육","통합","음악",""],
+        wed:["통합","수학","국어","영어","미술",""],
+        thu:["국어","통합","수학","체육","안전",""],
+        fri:["음악","국어","통합","수학","동아리",""]
       },
-      tasks:[{text:"아침 인사 나누기",done:false},{text:"알림장 쓰기",done:false},{text:"책상 주변 정리",done:false}]
+      tasks:[{text:"",done:false},{text:"",done:false},{text:"",done:false}]
     };
     let data = load();
     let lastSlot = "";
@@ -298,7 +316,9 @@
       $("regionBtn").addEventListener("click", openRegionModal);
       $("regionOk").addEventListener("click", applyRegionFromModal);
       document.querySelectorAll("[data-close-modal]").forEach(b => b.addEventListener("click", closeRegionModal));
-      $("schoolBtn").addEventListener("click", changeSchool);
+      $("schoolBtn").addEventListener("click", openSchoolModal);
+      $("schoolSearchBtn").addEventListener("click", searchSchools);
+      $("schoolInput").addEventListener("keydown", e => { if(e.key === "Enter") searchSchools(); });
     }
 
     function renderTimetable(){
@@ -306,7 +326,7 @@
       root.innerHTML = `<div class="trow"><div></div>${DAYS.map(d=>`<div class="thead">${d[1]}</div>`).join("")}</div>`;
       for(let p=1;p<=6;p++){
         const row = document.createElement("div"); row.className = "trow";
-        row.innerHTML = `<div class="period">${p}교시</div>` + DAYS.map(([key]) => `<input class="subjectInput" data-day="${key}" data-p="${p}" value="${esc(data.timetable[key][p-1])}" aria-label="${key} ${p}교시">`).join("");
+        row.innerHTML = `<div class="period">${p}교시</div>` + DAYS.map(([key]) => `<input class="subjectInput" data-day="${key}" data-p="${p}" value="${esc(data.timetable[key][p-1])}" placeholder="과목 작성" aria-label="${key} ${p}교시 과목">`).join("");
         root.appendChild(row);
       }
       root.querySelectorAll(".subjectInput").forEach(input => input.addEventListener("input", e => {
@@ -318,12 +338,19 @@
     function renderFlowOnly(){
       const day = todayKey();
       $("weekdayText").textContent = koreanWeekday();
-      $("flowList").innerHTML = SLOTS.map(slot => {
+      $("flowList").innerHTML = data.slots.map((slot, i) => {
         const cur = isCurrent(slot);
         const label = slot.type === "period" ? `${slot.p}교시` : slot.label;
         const sub = slot.type === "period" ? (data.timetable[day]?.[slot.p-1] || "과목 없음") : slot.sub;
-        return `<div class="flowItem ${cur ? "current" : ""}"><div class="flowTime">${slot.s}-${slot.e}</div><div class="flowName">${label} · ${esc(sub)}</div></div>`;
+        return `<div class="flowItem ${cur ? "current" : ""}"><div class="flowTime"><input type="time" value="${slot.s}" data-slot="${i}" data-edge="s" aria-label="시작 시간"><input type="time" value="${slot.e}" data-slot="${i}" data-edge="e" aria-label="끝 시간"></div><div class="flowName">${label} · ${esc(sub)}</div></div>`;
       }).join("");
+      document.querySelectorAll(".flowTime input").forEach(input => input.addEventListener("change", e => {
+        const slot = data.slots[Number(e.target.dataset.slot)];
+        slot[e.target.dataset.edge] = e.target.value;
+        save();
+        renderFlow();
+        highlightNowCell();
+      }));
     }
     function updateNowCard(){
       const slot = currentSlot(); const day = todayKey();
@@ -349,7 +376,7 @@
 
     function renderTasks(){
       const list = $("taskList");
-      list.innerHTML = data.tasks.slice(0,5).map((t,i)=>`<div class="task ${t.done ? "done" : ""}" data-i="${i}"><button class="check">✓</button><input class="taskInput" value="${esc(t.text)}"><button class="trash">×</button></div>`).join("");
+      list.innerHTML = data.tasks.slice(0,5).map((t,i)=>`<div class="task ${t.done ? "done" : ""}" data-i="${i}"><button class="check">✓</button><input class="taskInput" value="${esc(t.text)}" placeholder="작성하세요"><button class="trash">×</button></div>`).join("");
       if(!data.tasks.length) list.innerHTML = `<div class="mealEmpty">할 일을 추가해 주세요</div>`;
       list.querySelectorAll(".task").forEach(el => {
         const i = Number(el.dataset.i);
@@ -432,20 +459,35 @@
       }catch{ box.innerHTML = `<div class="mealEmpty">급식 조회가 어려워요. 학교 설정을 확인해 주세요.</div>`; }
     }
     function cleanMenu(s){ return s.replace(/\([^)]*\)/g,"").replace(/[0-9.]/g,"").replace(/\s+/g," ").trim(); }
-    async function changeSchool(){
-      const q = prompt("학교명을 입력하세요. 예: 도암초등학교", data.school.name || "");
+    function openSchoolModal(){
+      $("schoolInput").value = data.school.name || "";
+      $("schoolResults").innerHTML = "";
+      $("schoolModal").classList.add("show");
+      setTimeout(()=>$("schoolInput").focus(), 50);
+    }
+    async function searchSchools(){
+      const q = $("schoolInput").value.trim();
       if(!q) return;
+      const box = $("schoolResults");
+      box.innerHTML = `<div class="mealEmpty">학교를 검색하는 중</div>`;
       try{
-        const url = `https://open.neis.go.kr/hub/schoolInfo?Type=json&SCHUL_NM=${encodeURIComponent(q.trim())}`;
-        const res = await fetch(url); const json = await res.json(); const row = json.schoolInfo?.[1]?.row?.[0];
-        if(!row) throw new Error("no school");
-        data.school = {name:row.SCHUL_NM, office:row.ATPT_OFCDC_SC_CODE, code:row.SD_SCHUL_CODE}; save(); fetchMeal();
-        alert(`${row.SCHUL_NM} 급식으로 설정했어요.`);
+        const url = `https://open.neis.go.kr/hub/schoolInfo?Type=json&SCHUL_NM=${encodeURIComponent(q)}`;
+        const res = await fetch(url);
+        const json = await res.json();
+        const rows = json.schoolInfo?.[1]?.row || [];
+        if(!rows.length){ box.innerHTML = `<div class="mealEmpty">검색 결과가 없어요.</div>`; return; }
+        box.innerHTML = rows.slice(0,30).map((row,i)=>`<button class="schoolResult" data-i="${i}"><div class="schoolName">${esc(row.SCHUL_NM)}</div><div class="schoolMeta">${esc(row.LCTN_SC_NM || "지역 정보 없음")} · ${esc(row.ATPT_OFCDC_SC_NM || row.ATPT_OFCDC_SC_CODE || "교육청 정보 없음")}<br>${esc(row.ORG_RDNMA || row.ORG_RDNDA || row.ORG_TELNO || "주소 정보 없음")}</div></button>`).join("");
+        box.querySelectorAll(".schoolResult").forEach(btn => btn.addEventListener("click", () => selectSchool(rows[Number(btn.dataset.i)])));
       }catch{
-        const manual = prompt("학교 검색이 어려워요. 교육청코드,학교코드 형식으로 입력할 수 있어요. 예: J10,7530074");
-        if(!manual) return; const [office, code] = manual.split(",").map(x => x.trim());
-        if(office && code){ data.school = {name:q.trim(), office, code}; save(); fetchMeal(); }
+        box.innerHTML = `<div class="mealEmpty">학교 검색이 어려워요. 잠시 후 다시 시도해 주세요.</div>`;
       }
+    }
+    function selectSchool(row){
+      data.school = {name:row.SCHUL_NM, office:row.ATPT_OFCDC_SC_CODE, code:row.SD_SCHUL_CODE};
+      save();
+      closeRegionModal();
+      fetchMeal();
+      alert(`${row.SCHUL_NM} 급식으로 설정했어요.`);
     }
 
     function seoulParts(){
@@ -455,7 +497,7 @@
     }
     function koreanWeekday(){ return new Intl.DateTimeFormat("ko-KR",{timeZone:"Asia/Seoul",weekday:"long"}).format(new Date()); }
     function todayKey(){ const k = new Intl.DateTimeFormat("en-US",{timeZone:"Asia/Seoul",weekday:"short"}).format(new Date()).toLowerCase(); return {mon:"mon",tue:"tue",wed:"wed",thu:"thu",fri:"fri"}[k] || "mon"; }
-    function currentSlot(){ const n=nowMin(); return SLOTS.find(x => n >= min(x.s) && n < min(x.e)); }
+    function currentSlot(){ const n=nowMin(); return data.slots.find(x => n >= min(x.s) && n < min(x.e)); }
     function nowMin(){ const p=seoulParts(); return Number(p.hour)*60 + Number(p.minute); }
     function min(t){ const [h,m]=t.split(":").map(Number); return h*60+m; }
     function isCurrent(slot){ const c=currentSlot(); return c && c.s===slot.s && c.e===slot.e; }
