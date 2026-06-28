@@ -333,7 +333,7 @@
   <div class="modalBackdrop" id="regionModal">
     <div class="modal">
       <h2>지역 바꾸기</h2>
-      <p>날씨와 미세먼지를 볼 지역명을 입력하세요. 예: 이천, 서울, 부산, 제주<br />현재 위치를 쓰려면 <b>현재위치</b>라고 입력하세요.</p>
+      <p>날씨와 미세먼지를 볼 지역명을 입력하세요. 예: 이천, 서울, 부산, 제주, 창원 진해구<br />현재 위치를 쓰려면 <b>현재위치</b>라고 입력하세요.</p>
       <input id="regionInput" placeholder="예: 이천" />
       <div class="modalActions"><button class="cancel" data-close-modal>취소</button><button class="ok" id="regionOk">적용</button></div>
     </div>
@@ -776,6 +776,14 @@
     async function applyRegionFromModal(){
       const q = $('regionInput').value.trim(); if(!q) return;
       closeRegionModal(); $('regionBtn').textContent = '📍 검색중';
+
+      if(/^\s*\d+\s*,\s*\d+\s*$/.test(q)){
+        const [nx, ny] = q.split(',').map(v => Number(v.trim()));
+        data.location = {name:`격자 ${nx},${ny}`, lat:data.location.lat || 37.2723, lon:data.location.lon || 127.4350, nx, ny, mode:'grid'};
+        save(); updateRegionButton(); fetchWeatherAndAir();
+        return;
+      }
+
       if(q.replace(/\s/g,'') === '현재위치'){
         if(!navigator.geolocation){ alert('이 브라우저는 현재 위치를 지원하지 않아요. 지역명을 직접 입력해 주세요.'); updateRegionButton(); return; }
         navigator.geolocation.getCurrentPosition(pos => {
@@ -784,19 +792,34 @@
         }, () => { alert('현재 위치 권한이 필요해요. 지역명을 직접 입력해 주세요.'); updateRegionButton(); }, {timeout:8000, maximumAge:600000});
         return;
       }
+
       const region = findRegion(q);
-      if(!region){
-        const manual = prompt('지역을 찾지 못했어요.\n예: 이천, 이천시, 경기도 이천시, 서울, 부산\n\n직접 격자값을 알고 있으면 nx,ny 형식으로 입력할 수도 있어요. 예: 68,121');
-        if(manual && /^\s*\d+\s*,\s*\d+\s*$/.test(manual)){
-          const [nx,ny] = manual.split(',').map(v => Number(v.trim()));
-          data.location = {name:q, lat:data.location.lat || 37.2723, lon:data.location.lon || 127.4350, nx, ny, mode:'grid'};
-          save(); updateRegionButton(); fetchWeatherAndAir();
-        } else updateRegionButton();
+      if(region){
+        const grid = region.nx && region.ny ? {x:region.nx, y:region.ny} : dfsGrid(region.lat, region.lon);
+        data.location = {name:region.shortName || region.name, lat:region.lat, lon:region.lon, nx:grid.x, ny:grid.y, mode:'named'};
+        save(); updateRegionButton(); fetchWeatherAndAir();
         return;
       }
-      const grid = region.nx && region.ny ? {x:region.nx, y:region.ny} : dfsGrid(region.lat, region.lon);
-      data.location = {name:region.shortName, lat:region.lat, lon:region.lon, nx:grid.x, ny:grid.y, mode:'named'};
-      save(); updateRegionButton(); fetchWeatherAndAir();
+
+      try{
+        const matches = await searchRegionByGeocoding(q);
+        if(matches.length){
+          const selected = await chooseGeocodedRegion(matches);
+          if(selected){
+            const grid = dfsGrid(selected.lat, selected.lon);
+            data.location = {name:selected.name, lat:selected.lat, lon:selected.lon, nx:grid.x, ny:grid.y, mode:'geocoded'};
+            save(); updateRegionButton(); fetchWeatherAndAir();
+            return;
+          }
+        }
+      }catch(e){}
+
+      const manual = prompt('지역을 찾지 못했어요.\n예: 이천, 이천시, 경기도 이천시, 서울, 부산, 창원 진해구\n\n직접 격자값을 알고 있으면 nx,ny 형식으로 입력할 수도 있어요. 예: 90,75');
+      if(manual && /^\s*\d+\s*,\s*\d+\s*$/.test(manual)){
+        const [nx,ny] = manual.split(',').map(v => Number(v.trim()));
+        data.location = {name:q, lat:data.location.lat || 37.2723, lon:data.location.lon || 127.4350, nx, ny, mode:'grid'};
+        save(); updateRegionButton(); fetchWeatherAndAir();
+      } else updateRegionButton();
     }
     function updateRegionButton(){ $('regionBtn').textContent = `📍 ${data.location.name || '지역'}`; }
     function ensureLocationGrid(){
@@ -857,6 +880,127 @@
       return all.find(r => r.aliases.includes(q)) || all.find(r => r.aliases.some(a => a.includes(q) || q.includes(a)));
     }
     function normRegion(s){ return String(s || '').toLowerCase().replace(/\s/g,'').replace(/특별자치도|특별자치시|특별시|광역시|자치도/g,''); }
+
+    const EXTRA_REGIONS = [
+      ['진해', '진해구 창원시 경상남도', 35.1494, 128.6597],
+      ['창원 진해구', '진해구 창원시 경상남도', 35.1494, 128.6597],
+      ['마산', '마산합포구 창원시 경상남도', 35.1969, 128.5679],
+      ['창원', '창원시 경상남도', 35.2281, 128.6811],
+      ['김해', '김해시 경상남도', 35.2285, 128.8894],
+      ['양산', '양산시 경상남도', 35.3350, 129.0370],
+      ['거제', '거제시 경상남도', 34.8806, 128.6210],
+      ['통영', '통영시 경상남도', 34.8544, 128.4330],
+      ['강남구', '강남구 서울특별시', 37.5172, 127.0473],
+      ['서초구', '서초구 서울특별시', 37.4837, 127.0324],
+      ['송파구', '송파구 서울특별시', 37.5145, 127.1059],
+      ['마포구', '마포구 서울특별시', 37.5663, 126.9019],
+      ['해운대구', '해운대구 부산광역시', 35.1631, 129.1635],
+      ['수영구', '수영구 부산광역시', 35.1456, 129.1131],
+      ['수성구', '수성구 대구광역시', 35.8582, 128.6306],
+      ['유성구', '유성구 대전광역시', 36.3623, 127.3563],
+      ['연수구', '연수구 인천광역시', 37.4102, 126.6783],
+      ['분당', '분당구 성남시 경기도', 37.3828, 127.1189],
+      ['분당구', '분당구 성남시 경기도', 37.3828, 127.1189],
+      ['일산', '일산동구 고양시 경기도', 37.6584, 126.7730],
+      ['일산동구', '일산동구 고양시 경기도', 37.6584, 126.7730],
+      ['수원', '수원시 경기도', 37.2636, 127.0286],
+      ['용인', '용인시 경기도', 37.2411, 127.1776],
+      ['성남', '성남시 경기도', 37.4200, 127.1265],
+      ['고양', '고양시 경기도', 37.6584, 126.8320],
+      ['부천', '부천시 경기도', 37.5035, 126.7660],
+      ['천안', '천안시 충청남도', 36.8151, 127.1139],
+      ['아산', '아산시 충청남도', 36.7898, 127.0025],
+      ['청주', '청주시 충청북도', 36.6424, 127.4890],
+      ['전주', '전주시 전라북도', 35.8242, 127.1480],
+      ['군산', '군산시 전라북도', 35.9676, 126.7369],
+      ['여수', '여수시 전라남도', 34.7604, 127.6622],
+      ['순천', '순천시 전라남도', 34.9506, 127.4875],
+      ['목포', '목포시 전라남도', 34.8118, 126.3922],
+      ['포항', '포항시 경상북도', 36.0190, 129.3435],
+      ['경주', '경주시 경상북도', 35.8562, 129.2247],
+      ['구미', '구미시 경상북도', 36.1195, 128.3446],
+      ['안동', '안동시 경상북도', 36.5684, 128.7294],
+      ['춘천', '춘천시 강원도', 37.8813, 127.7298],
+      ['원주', '원주시 강원도', 37.3422, 127.9202],
+      ['강릉', '강릉시 강원도', 37.7519, 128.8761]
+    ];
+
+    function extraRegionMatches(query){
+      const q = normRegion(query);
+      return EXTRA_REGIONS
+        .filter(([name, full]) => {
+          const n = normRegion(name);
+          const f = normRegion(full);
+          return n === q || f === q || f.includes(q) || q.includes(n);
+        })
+        .map(([name, full, lat, lon]) => ({
+          key: `extra|${name}|${lat}|${lon}`,
+          name: full || name,
+          lat,
+          lon
+        }));
+    }
+
+    function regionSearchAliases(query){
+      const compact = normRegion(query);
+      const aliases = new Map([
+        ['진해','Jinhae-gu'],
+        ['진해구','Jinhae-gu'],
+        ['창원진해','Jinhae-gu'],
+        ['창원진해구','Jinhae-gu'],
+        ['마산','Masan'],
+        ['마산합포','Masan Happo-gu'],
+        ['마산회원','Masan Hoewon-gu'],
+        ['창원','Changwon'],
+        ['분당','Bundang-gu'],
+        ['일산','Ilsan'],
+        ['해운대','Haeundae-gu']
+      ]);
+      return aliases.get(compact) || query;
+    }
+
+    async function searchRegionByGeocoding(query){
+      const terms = Array.from(new Set([query, regionSearchAliases(query)]));
+      const results = extraRegionMatches(query);
+      for(const term of terms){
+        const url = new URL('https://geocoding-api.open-meteo.com/v1/search');
+        url.searchParams.set('name', term);
+        url.searchParams.set('count', '20');
+        url.searchParams.set('language', 'ko');
+        url.searchParams.set('format', 'json');
+        const res = await fetch(url);
+        if(!res.ok) continue;
+        const json = await res.json();
+        for(const item of (json.results || [])){
+          const country = item.country_code || item.country;
+          if(country && country !== 'KR' && country !== '대한민국' && country !== 'South Korea') continue;
+          const key = `${item.name}|${item.admin1 || ''}|${item.admin2 || ''}|${item.latitude}|${item.longitude}`;
+          if(results.some(x => x.key === key)) continue;
+          results.push({
+            key,
+            name: formatGeocodedRegion(item),
+            lat: Number(item.latitude),
+            lon: Number(item.longitude)
+          });
+        }
+      }
+      return results.filter(x => Number.isFinite(x.lat) && Number.isFinite(x.lon)).slice(0, 10);
+    }
+
+    function formatGeocodedRegion(item){
+      return [item.name, item.admin2, item.admin1]
+        .filter(Boolean)
+        .filter((v, i, arr) => arr.indexOf(v) === i)
+        .join(' ');
+    }
+
+    async function chooseGeocodedRegion(matches){
+      if(matches.length === 1) return matches[0];
+      const list = matches.map((m, i) => `${i + 1}. ${m.name}`).join('\n');
+      const pick = prompt(`검색된 지역 중 사용할 지역 번호를 입력하세요.\n\n${list}`, '1');
+      if(!pick) return null;
+      return matches[Number(pick) - 1] || null;
+    }
 
     async function fetchWeatherAndAir(){
       updateRegionButton(); ensureLocationGrid();
