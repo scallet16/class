@@ -1,0 +1,839 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>용기 뿜뿜 통합교육1반 스마트 보드</title>
+  <style>
+    :root {
+      --bg: #f7f4ee;
+      --panel: rgba(255,255,255,.86);
+      --panel-strong: #ffffff;
+      --text: #263238;
+      --muted: #68737d;
+      --line: rgba(38,50,56,.12);
+      --shadow: 0 18px 45px rgba(42,48,57,.13);
+      --accent: #ff6f91;
+      --accent-2: #8bd3dd;
+      --accent-3: #ffd166;
+      --good: #4cc38a;
+      --warn: #ffb020;
+      --bad: #ff6b6b;
+      --radius: 24px;
+      --font-scale: 1;
+    }
+
+    [data-theme="green"] { --accent:#51b883; --accent-2:#79d4c1; --accent-3:#f8d86a; --bg:#f2f8ef; }
+    [data-theme="blue"] { --accent:#4d96ff; --accent-2:#9ad7ff; --accent-3:#ffd166; --bg:#f1f7ff; }
+    [data-theme="orange"] { --accent:#ff9f45; --accent-2:#ffd166; --accent-3:#8bd3dd; --bg:#fff6ec; }
+    [data-dark="true"] {
+      --bg:#141922;
+      --panel:rgba(31,38,50,.88);
+      --panel-strong:#242c39;
+      --text:#f5f7fb;
+      --muted:#b7c0cc;
+      --line:rgba(255,255,255,.13);
+      --shadow:0 18px 48px rgba(0,0,0,.28);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { width:100%; height:100%; margin:0; overflow:hidden; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 12% 10%, color-mix(in srgb, var(--accent) 20%, transparent), transparent 26%),
+        radial-gradient(circle at 88% 24%, color-mix(in srgb, var(--accent-2) 24%, transparent), transparent 28%),
+        linear-gradient(135deg, var(--bg), color-mix(in srgb, var(--bg) 86%, white));
+    }
+
+    button, input, textarea, select { font: inherit; color: inherit; }
+    button {
+      border: 0;
+      background: var(--panel-strong);
+      border-radius: 16px;
+      min-width: 46px;
+      min-height: 42px;
+      display: inline-grid;
+      place-items: center;
+      cursor: pointer;
+      box-shadow: 0 8px 24px rgba(0,0,0,.09);
+    }
+    button:hover { transform: translateY(-1px); }
+
+    .app {
+      width: 100vw;
+      height: 100vh;
+      padding: clamp(10px, 1.4vw, 22px);
+      display: grid;
+      grid-template-rows: auto 1fr;
+      gap: clamp(10px, 1vw, 16px);
+    }
+
+    .topbar {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .title {
+      margin: 0;
+      min-width: 0;
+      font-size: calc(clamp(34px, 4.1vw, 64px) * var(--font-scale));
+      line-height: 1;
+      letter-spacing: 0;
+      font-weight: 900;
+      outline: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-shadow: 0 6px 20px rgba(0,0,0,.08);
+    }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px;
+      border-radius: 22px;
+      background: rgba(255,255,255,.44);
+      backdrop-filter: blur(14px);
+      box-shadow: var(--shadow);
+    }
+
+    .swatch {
+      width: 36px;
+      height: 36px;
+      min-width: 36px;
+      min-height: 36px;
+      border-radius: 50%;
+      box-shadow: inset 0 0 0 3px rgba(255,255,255,.6), 0 7px 18px rgba(0,0,0,.12);
+    }
+    .swatch.active { outline: 4px solid color-mix(in srgb, var(--accent) 42%, transparent); }
+    .pink { background:#ff6f91; }
+    .green { background:#51b883; }
+    .blue { background:#4d96ff; }
+    .orange { background:#ff9f45; }
+
+    .dashboard {
+      min-height: 0;
+      display: grid;
+      grid-template-columns: 1.28fr .72fr;
+      gap: clamp(10px, 1vw, 16px);
+    }
+
+    .left, .right {
+      min-height: 0;
+      display: grid;
+      gap: clamp(10px, 1vw, 16px);
+    }
+    .left { grid-template-rows: 1.05fr .68fr 1.27fr; }
+    .right { grid-template-rows: .86fr 1fr; }
+
+    .row-2 {
+      min-height: 0;
+      display: grid;
+      grid-template-columns: .92fr 1.08fr;
+      gap: clamp(10px, 1vw, 16px);
+    }
+
+    .card {
+      min-height: 0;
+      border-radius: var(--radius);
+      background: var(--panel);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+      padding: clamp(12px, 1.2vw, 18px);
+      overflow: hidden;
+    }
+
+    .card-head {
+      height: 34px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 9px;
+    }
+    .card h2 {
+      margin: 0;
+      font-size: calc(clamp(20px, 1.55vw, 30px) * var(--font-scale));
+      line-height: 1;
+      letter-spacing: 0;
+      font-weight: 900;
+    }
+    .hint, .badge {
+      color: var(--muted);
+      font-size: calc(clamp(12px, .92vw, 17px) * var(--font-scale));
+      font-weight: 800;
+    }
+
+    .timetable {
+      width: 100%;
+      height: calc(100% - 43px);
+      border-collapse: separate;
+      border-spacing: 6px;
+      table-layout: fixed;
+    }
+    .timetable th, .timetable td {
+      border-radius: 14px;
+      text-align: center;
+      vertical-align: middle;
+      overflow: hidden;
+    }
+    .timetable th {
+      height: 28px;
+      color: var(--muted);
+      font-size: calc(clamp(13px, 1vw, 17px) * var(--font-scale));
+      font-weight: 900;
+    }
+    .period-label {
+      background: color-mix(in srgb, var(--accent) 16%, transparent);
+      font-size: calc(clamp(14px, 1.05vw, 18px) * var(--font-scale));
+      font-weight: 900;
+      color: var(--accent);
+      width: 54px;
+    }
+    .subject {
+      background: color-mix(in srgb, var(--panel-strong) 78%, var(--accent-2));
+      border: 1px solid var(--line);
+      font-size: calc(clamp(15px, 1.16vw, 21px) * var(--font-scale));
+      font-weight: 900;
+      outline: 0;
+    }
+    .subject.today { box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--accent) 38%, transparent); }
+    .subject.now {
+      color: #111827;
+      background: linear-gradient(135deg, var(--accent-3), var(--accent-2));
+      transform: scale(1.03);
+    }
+
+    .clock-card {
+      display: grid;
+      align-content: center;
+      gap: 8px;
+    }
+    .date {
+      font-size: calc(clamp(20px, 1.7vw, 30px) * var(--font-scale));
+      font-weight: 900;
+      color: var(--muted);
+    }
+    .time {
+      font-size: calc(clamp(48px, 5.2vw, 84px) * var(--font-scale));
+      line-height: .98;
+      font-weight: 1000;
+      font-variant-numeric: tabular-nums;
+    }
+    .api-note {
+      font-size: calc(clamp(12px, .9vw, 15px) * var(--font-scale));
+      color: var(--muted);
+      font-weight: 750;
+      line-height: 1.35;
+    }
+
+    .air-grid {
+      height: calc(100% - 43px);
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+    .air-tile {
+      border-radius: 20px;
+      padding: 14px;
+      display: grid;
+      align-content: center;
+      gap: 6px;
+      background: color-mix(in srgb, var(--accent-2) 20%, var(--panel-strong));
+      border: 1px solid var(--line);
+    }
+    .air-emoji { font-size: calc(clamp(35px, 3.1vw, 54px) * var(--font-scale)); line-height: 1; }
+    .air-label { font-size: calc(clamp(14px, 1vw, 18px) * var(--font-scale)); color: var(--muted); font-weight: 900; }
+    .air-value { font-size: calc(clamp(28px, 2.35vw, 44px) * var(--font-scale)); font-weight: 1000; font-variant-numeric: tabular-nums; line-height: 1; }
+    .air-status { font-size: calc(clamp(14px, 1.1vw, 20px) * var(--font-scale)); font-weight: 1000; }
+    .location-line {
+      grid-column: 1 / -1;
+      align-self: end;
+      color: var(--muted);
+      font-size: calc(clamp(12px, .95vw, 16px) * var(--font-scale));
+      font-weight: 800;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
+    .flow-list {
+      height: calc(100% - 43px);
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+    .flow-block {
+      border-radius: 18px;
+      padding: 10px;
+      display: grid;
+      align-content: center;
+      gap: 6px;
+      background: var(--panel-strong);
+      border: 1px solid var(--line);
+      min-width: 0;
+    }
+    .flow-block.current {
+      color: #111827;
+      background: linear-gradient(135deg, var(--accent), var(--accent-3));
+      box-shadow: 0 10px 28px color-mix(in srgb, var(--accent) 30%, transparent);
+    }
+    .flow-time { font-size: calc(clamp(12px, .95vw, 16px) * var(--font-scale)); font-weight: 900; opacity: .78; }
+    .flow-name { font-size: calc(clamp(17px, 1.42vw, 25px) * var(--font-scale)); font-weight: 1000; line-height: 1.08; overflow-wrap: anywhere; }
+    .flow-subject { font-size: calc(clamp(13px, 1.05vw, 18px) * var(--font-scale)); font-weight: 900; opacity: .82; overflow-wrap: anywhere; }
+
+    .now-panel {
+      display: grid;
+      align-content: center;
+      gap: 12px;
+      background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 72%, white), color-mix(in srgb, var(--accent-2) 62%, white));
+      color: #111827;
+    }
+    .now-kicker { font-size: calc(clamp(18px, 1.5vw, 28px) * var(--font-scale)); font-weight: 900; opacity: .72; }
+    .now-main { font-size: calc(clamp(42px, 4.6vw, 80px) * var(--font-scale)); line-height: .98; font-weight: 1000; overflow-wrap: anywhere; }
+    .now-sub { font-size: calc(clamp(22px, 1.9vw, 36px) * var(--font-scale)); font-weight: 950; opacity: .82; }
+
+    .tasks {
+      height: calc(100% - 43px);
+      display: grid;
+      grid-template-rows: 1fr auto;
+      gap: 10px;
+    }
+    .task-list {
+      min-height: 0;
+      display: grid;
+      gap: 9px;
+      overflow: hidden;
+    }
+    .task {
+      display: grid;
+      grid-template-columns: 42px 1fr 42px;
+      align-items: center;
+      gap: 8px;
+      min-height: 52px;
+      padding: 7px 8px;
+      border-radius: 18px;
+      background: var(--panel-strong);
+      border: 1px solid var(--line);
+    }
+    .task input[type="checkbox"] {
+      width: 30px;
+      height: 30px;
+      accent-color: var(--accent);
+    }
+    .task-text {
+      min-width: 0;
+      outline: 0;
+      font-size: calc(clamp(18px, 1.45vw, 26px) * var(--font-scale));
+      font-weight: 900;
+      overflow-wrap: anywhere;
+    }
+    .task.done .task-text { text-decoration: line-through; color: var(--muted); }
+    .task-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+    .icon { width: 22px; height: 22px; display: block; }
+    .add-task { width: 100%; color: #111827; background: linear-gradient(135deg, var(--accent-3), var(--accent-2)); font-weight: 1000; }
+
+    @media (max-width: 980px) {
+      html, body { overflow:auto; height:auto; }
+      .app { height:auto; min-height:100vh; }
+      .topbar, .dashboard, .row-2 { grid-template-columns: 1fr; }
+      .left, .right { grid-template-rows: auto; }
+      .card { min-height: 260px; }
+      .flow-list { grid-template-columns: repeat(2, 1fr); }
+      .title { white-space: normal; }
+      .controls { flex-wrap: wrap; justify-content: center; }
+    }
+  </style>
+</head>
+<body data-theme="pink" data-dark="false">
+  <main class="app" id="board">
+    <header class="topbar">
+      <h1 class="title" contenteditable="true" spellcheck="false" data-save="classTitle">용기 뿜뿜 통합교육1반</h1>
+      <nav class="controls" aria-label="설정">
+        <button class="swatch pink active" data-theme-btn="pink" title="분홍 테마"></button>
+        <button class="swatch green" data-theme-btn="green" title="초록 테마"></button>
+        <button class="swatch blue" data-theme-btn="blue" title="파랑 테마"></button>
+        <button class="swatch orange" data-theme-btn="orange" title="주황 테마"></button>
+        <button id="bigTextBtn" title="왕글자 모드" aria-label="왕글자 모드">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></svg>
+        </button>
+        <button id="darkBtn" title="밤 모드" aria-label="밤 모드">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 3a6.7 6.7 0 0 0 8.8 8.8A9 9 0 1 1 12 3Z"/></svg>
+        </button>
+        <button id="saveJpgBtn" title="JPG 저장" aria-label="JPG 저장">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+        </button>
+      </nav>
+    </header>
+
+    <section class="dashboard">
+      <div class="left">
+        <article class="card">
+          <div class="card-head">
+            <h2>주간 시간표</h2>
+            <span class="badge">과목을 클릭해서 수정</span>
+          </div>
+          <table class="timetable" aria-label="주간 시간표">
+            <thead>
+              <tr><th></th><th>월</th><th>화</th><th>수</th><th>목</th><th>금</th></tr>
+            </thead>
+            <tbody id="timetableBody"></tbody>
+          </table>
+        </article>
+
+        <div class="row-2">
+          <article class="card clock-card">
+            <div class="date" id="dateText">-</div>
+            <div class="time" id="timeText">00:00:00</div>
+            <div class="api-note">서울 시각은 브라우저의 Asia/Seoul 시간대로 표시합니다.</div>
+          </article>
+
+          <article class="card">
+            <div class="card-head">
+              <h2>대기 정보</h2>
+              <button id="refreshAirBtn" title="위치 새로고침" aria-label="위치 새로고침">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M21 12a9 9 0 0 1-15 6.7"/><path d="M3 12a9 9 0 0 1 15-6.7"/><path d="M18 2v4h-4"/><path d="M6 22v-4h4"/></svg>
+              </button>
+            </div>
+            <div class="air-grid">
+              <div class="air-tile">
+                <div class="air-emoji" id="pm10Emoji">🌤️</div>
+                <div class="air-label">미세먼지 PM10</div>
+                <div class="air-value"><span id="pm10Value">--</span></div>
+                <div class="air-status" id="pm10Status">확인 중</div>
+              </div>
+              <div class="air-tile">
+                <div class="air-emoji" id="pm25Emoji">🍃</div>
+                <div class="air-label">초미세먼지 PM2.5</div>
+                <div class="air-value"><span id="pm25Value">--</span></div>
+                <div class="air-status" id="pm25Status">확인 중</div>
+              </div>
+              <div class="location-line" id="airLocation">위치 권한을 허용하면 가장 가까운 측정소 값을 표시합니다.</div>
+            </div>
+          </article>
+        </div>
+
+        <article class="card">
+          <div class="card-head">
+            <h2>오늘의 흐름</h2>
+            <span class="badge" id="todayName">오늘</span>
+          </div>
+          <div class="flow-list" id="flowList"></div>
+        </article>
+      </div>
+
+      <aside class="right">
+        <article class="card now-panel">
+          <div class="now-kicker">지금은</div>
+          <div class="now-main" id="nowMain">준비 시간</div>
+          <div class="now-sub" id="nowSub">오늘도 반짝이게 시작해요</div>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <h2>오늘의 할 일</h2>
+            <span class="badge">체크 가능</span>
+          </div>
+          <div class="tasks">
+            <div class="task-list" id="taskList"></div>
+            <button class="add-task" id="addTaskBtn">+ 할 일 추가</button>
+          </div>
+        </article>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    const STORAGE_KEY = "classSmartBoard.v1";
+    const weekdays = ["일", "월", "화", "수", "목", "금", "토"];
+    const tableDays = ["월", "화", "수", "목", "금"];
+    const defaultSubjects = [
+      ["국어", "수학", "통합", "미술", "창체"],
+      ["수학", "국어", "체육", "통합", "음악"],
+      ["통합", "수학", "국어", "영어", "미술"],
+      ["국어", "통합", "수학", "체육", "창체"],
+      ["음악", "국어", "통합", "수학", "독서"],
+      ["창체", "미술", "동아리", "안전", "정리"]
+    ];
+    const flow = [
+      { id:"morning", name:"아침자습", start:"08:30", end:"09:00" },
+      { id:1, name:"1교시", start:"09:00", end:"09:40" },
+      { id:"break1", name:"쉬는시간", start:"09:40", end:"09:50" },
+      { id:2, name:"2교시", start:"09:50", end:"10:30" },
+      { id:"break2", name:"쉬는시간", start:"10:30", end:"10:40" },
+      { id:3, name:"3교시", start:"10:40", end:"11:20" },
+      { id:"break3", name:"쉬는시간", start:"11:20", end:"11:30" },
+      { id:4, name:"4교시", start:"11:30", end:"12:10" },
+      { id:"lunch", name:"점심시간", start:"12:10", end:"12:20" },
+      { id:5, name:"5교시", start:"12:20", end:"13:00" },
+      { id:6, name:"6교시", start:"13:00", end:"13:40" }
+    ];
+
+    let state = loadState();
+
+    function loadState() {
+      const defaults = {
+        classTitle: "용기 뿜뿜 통합교육1반",
+        theme: "pink",
+        dark: false,
+        bigText: false,
+        subjects: defaultSubjects,
+        tasks: [
+          { text: "아침 인사 나누기", done: false },
+          { text: "알림장 쓰기", done: false },
+          { text: "책상 주변 정리", done: false }
+        ],
+        air: null
+      };
+      try {
+        return { ...defaults, ...(JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}) };
+      } catch {
+        return defaults;
+      }
+    }
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    function minuteOf(timeText) {
+      const [h, m] = timeText.split(":").map(Number);
+      return h * 60 + m;
+    }
+
+    function currentFlow(now = new Date()) {
+      const minutes = now.getHours() * 60 + now.getMinutes();
+      return flow.find(item => minutes >= minuteOf(item.start) && minutes < minuteOf(item.end)) || null;
+    }
+
+    function subjectFor(period, dayIndex = new Date().getDay()) {
+      if (typeof period !== "number" || dayIndex < 1 || dayIndex > 5) return "";
+      return state.subjects[period - 1]?.[dayIndex - 1] || "";
+    }
+
+    function renderTimetable() {
+      const tbody = document.getElementById("timetableBody");
+      tbody.innerHTML = "";
+      for (let period = 1; period <= 6; period++) {
+        const row = document.createElement("tr");
+        const label = document.createElement("td");
+        label.className = "period-label";
+        label.textContent = `${period}교시`;
+        row.appendChild(label);
+        for (let day = 0; day < 5; day++) {
+          const cell = document.createElement("td");
+          cell.className = "subject";
+          cell.contentEditable = "true";
+          cell.spellcheck = false;
+          cell.dataset.period = period - 1;
+          cell.dataset.day = day;
+          cell.textContent = state.subjects[period - 1][day];
+          cell.addEventListener("input", () => {
+            state.subjects[Number(cell.dataset.period)][Number(cell.dataset.day)] = cell.textContent.trim();
+            saveState();
+            updateNow();
+          });
+          row.appendChild(cell);
+        }
+        tbody.appendChild(row);
+      }
+    }
+
+    function renderTasks() {
+      const list = document.getElementById("taskList");
+      list.innerHTML = "";
+      state.tasks.slice(0, 6).forEach((task, index) => {
+        const item = document.createElement("div");
+        item.className = `task ${task.done ? "done" : ""}`;
+        item.innerHTML = `
+          <input type="checkbox" ${task.done ? "checked" : ""} aria-label="완료">
+          <div class="task-text" contenteditable="true" spellcheck="false"></div>
+          <button title="삭제" aria-label="삭제">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/></svg>
+          </button>
+        `;
+        item.querySelector(".task-text").textContent = task.text;
+        item.querySelector("input").addEventListener("change", event => {
+          state.tasks[index].done = event.target.checked;
+          saveState();
+          renderTasks();
+        });
+        item.querySelector(".task-text").addEventListener("input", event => {
+          state.tasks[index].text = event.target.textContent.trim();
+          saveState();
+        });
+        item.querySelector("button").addEventListener("click", () => {
+          state.tasks.splice(index, 1);
+          saveState();
+          renderTasks();
+        });
+        list.appendChild(item);
+      });
+    }
+
+    function renderFlow() {
+      const list = document.getElementById("flowList");
+      list.innerHTML = "";
+      flow.forEach(item => {
+        const block = document.createElement("div");
+        block.className = "flow-block";
+        block.dataset.flowId = item.id;
+        block.innerHTML = `
+          <div class="flow-time">${item.start}-${item.end}</div>
+          <div class="flow-name">${item.name}</div>
+          <div class="flow-subject"></div>
+        `;
+        list.appendChild(block);
+      });
+    }
+
+    function updateClock() {
+      const now = new Date();
+      const dateText = new Intl.DateTimeFormat("ko-KR", {
+        timeZone: "Asia/Seoul",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        weekday: "long"
+      }).format(now);
+      const timeText = new Intl.DateTimeFormat("ko-KR", {
+        timeZone: "Asia/Seoul",
+        hour12: false,
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit"
+      }).format(now);
+      document.getElementById("dateText").textContent = dateText;
+      document.getElementById("timeText").textContent = timeText;
+      updateNow(now);
+    }
+
+    function updateNow(now = new Date()) {
+      const active = currentFlow(now);
+      const day = now.getDay();
+      const dayName = weekdays[day];
+      document.getElementById("todayName").textContent = `${dayName}요일`;
+      document.querySelectorAll(".subject").forEach(cell => {
+        const isToday = Number(cell.dataset.day) === day - 1;
+        const isNow = active && Number(cell.dataset.period) === active.id - 1 && isToday;
+        cell.classList.toggle("today", isToday);
+        cell.classList.toggle("now", Boolean(isNow));
+      });
+      document.querySelectorAll(".flow-block").forEach(block => {
+        const item = flow.find(entry => String(entry.id) === block.dataset.flowId);
+        const sub = block.querySelector(".flow-subject");
+        const subject = subjectFor(item.id, day);
+        sub.textContent = subject || (typeof item.id === "number" ? "과목 없음" : "함께 준비");
+        block.classList.toggle("current", active && String(active.id) === String(item.id));
+      });
+      const main = document.getElementById("nowMain");
+      const sub = document.getElementById("nowSub");
+      if (!active) {
+        main.textContent = "수업 전후";
+        sub.textContent = "다음 활동을 준비해요";
+        return;
+      }
+      const subject = subjectFor(active.id, day);
+      main.textContent = typeof active.id === "number" && subject ? `${active.name} ${subject}` : active.name;
+      sub.textContent = `${active.start}부터 ${active.end}까지`;
+    }
+
+    function applyAppearance() {
+      document.body.dataset.theme = state.theme;
+      document.body.dataset.dark = String(state.dark);
+      document.documentElement.style.setProperty("--font-scale", state.bigText ? "1.13" : "1");
+      document.querySelectorAll("[data-theme-btn]").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.themeBtn === state.theme);
+      });
+    }
+
+    function gradeAir(kind, value) {
+      if (value == null || Number.isNaN(value)) return { text:"확인 중", emoji:"🌤️", color:"var(--muted)" };
+      const limits = kind === "pm25" ? [15, 35, 75] : [30, 80, 150];
+      if (value <= limits[0]) return { text:"좋음", emoji:"😊", color:"var(--good)" };
+      if (value <= limits[1]) return { text:"보통", emoji:"🙂", color:"var(--accent)" };
+      if (value <= limits[2]) return { text:"나쁨", emoji:"😷", color:"var(--warn)" };
+      return { text:"매우 나쁨", emoji:"🚫", color:"var(--bad)" };
+    }
+
+    function renderAir(data = state.air) {
+      const pm10 = Number(data?.pm10);
+      const pm25 = Number(data?.pm25);
+      const g10 = gradeAir("pm10", Number.isFinite(pm10) ? pm10 : null);
+      const g25 = gradeAir("pm25", Number.isFinite(pm25) ? pm25 : null);
+      document.getElementById("pm10Value").textContent = Number.isFinite(pm10) ? `${pm10}㎍/㎥` : "--";
+      document.getElementById("pm25Value").textContent = Number.isFinite(pm25) ? `${pm25}㎍/㎥` : "--";
+      document.getElementById("pm10Status").textContent = g10.text;
+      document.getElementById("pm25Status").textContent = g25.text;
+      document.getElementById("pm10Emoji").textContent = g10.emoji;
+      document.getElementById("pm25Emoji").textContent = g25.emoji;
+      document.getElementById("pm10Status").style.color = g10.color;
+      document.getElementById("pm25Status").style.color = g25.color;
+      document.getElementById("airLocation").textContent = data?.label || "위치 권한을 허용하면 가장 가까운 측정소 값을 표시합니다.";
+    }
+
+    async function refreshAir() {
+      const location = document.getElementById("airLocation");
+      if (!navigator.geolocation) {
+        location.textContent = "이 브라우저는 위치 기능을 지원하지 않습니다.";
+        return;
+      }
+      location.textContent = "현재 위치를 확인하고 있어요...";
+      navigator.geolocation.getCurrentPosition(async pos => {
+        const { latitude, longitude } = pos.coords;
+        try {
+          const url = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${latitude.toFixed(4)}&longitude=${longitude.toFixed(4)}&hourly=pm10,pm2_5&timezone=Asia%2FSeoul&forecast_days=1`;
+          const response = await fetch(url);
+          if (!response.ok) throw new Error("air api failed");
+          const json = await response.json();
+          const times = json.hourly?.time || [];
+          const nowHour = new Date().toISOString().slice(0, 13);
+          let index = times.findIndex(time => time.replace("T", " ").slice(0, 13) === nowHour);
+          if (index < 0) index = Math.max(0, times.length - 1);
+          state.air = {
+            pm10: Math.round(json.hourly.pm10[index]),
+            pm25: Math.round(json.hourly.pm2_5[index]),
+            label: `현재 위치 기준 (${latitude.toFixed(2)}, ${longitude.toFixed(2)}) · Open-Meteo 대기질`
+          };
+          saveState();
+          renderAir();
+        } catch {
+          state.air = {
+            pm10: 34,
+            pm25: 18,
+            label: "API 연결 실패: 예시 값을 표시합니다. 실제 운영은 AirKorea API 키 연결을 추천합니다."
+          };
+          saveState();
+          renderAir();
+        }
+      }, () => {
+        location.textContent = "위치 권한이 필요합니다. 허용 후 새로고침 버튼을 눌러주세요.";
+      }, { enableHighAccuracy: false, timeout: 9000, maximumAge: 600000 });
+    }
+
+    function loadHtml2Canvas() {
+      if (window.html2canvas) return Promise.resolve(window.html2canvas);
+      return new Promise((resolve, reject) => {
+        const script = document.createElement("script");
+        const timer = setTimeout(() => reject(new Error("html2canvas timeout")), 5500);
+        script.src = "https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js";
+        script.onload = () => {
+          clearTimeout(timer);
+          resolve(window.html2canvas);
+        };
+        script.onerror = () => {
+          clearTimeout(timer);
+          reject(new Error("html2canvas failed"));
+        };
+        document.head.appendChild(script);
+      });
+    }
+
+    async function fallbackBoardCanvas(board) {
+      const clone = board.cloneNode(true);
+      clone.querySelectorAll("[contenteditable]").forEach(node => node.removeAttribute("contenteditable"));
+      const css = Array.from(document.styleSheets)
+        .map(sheet => {
+          try { return Array.from(sheet.cssRules).map(rule => rule.cssText).join("\n"); }
+          catch { return ""; }
+        })
+        .join("\n");
+      const html = new XMLSerializer().serializeToString(clone);
+      const svg = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="${window.innerWidth * 2}" height="${window.innerHeight * 2}" viewBox="0 0 ${window.innerWidth} ${window.innerHeight}">
+          <foreignObject width="100%" height="100%">
+            <div xmlns="http://www.w3.org/1999/xhtml">
+              <style>${css}</style>${html}
+            </div>
+          </foreignObject>
+        </svg>`;
+      const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const image = new Image();
+      image.src = url;
+      await image.decode();
+      const canvas = document.createElement("canvas");
+      canvas.width = window.innerWidth * 2;
+      canvas.height = window.innerHeight * 2;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = getComputedStyle(document.body).backgroundColor || "#ffffff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(url);
+      return canvas;
+    }
+
+    async function saveJpg() {
+      const board = document.getElementById("board");
+      let canvas;
+      try {
+        const capture = await loadHtml2Canvas();
+        canvas = await capture(board, {
+          backgroundColor: getComputedStyle(document.body).backgroundColor,
+          scale: 2,
+          useCORS: true
+        });
+      } catch {
+        canvas = await fallbackBoardCanvas(board);
+      }
+      const link = document.createElement("a");
+      link.download = `class-smart-board-${new Date().toISOString().slice(0,10)}.jpg`;
+      link.href = canvas.toDataURL("image/jpeg", .94);
+      link.click();
+    }
+
+    function bindEvents() {
+      document.querySelector("[data-save='classTitle']").textContent = state.classTitle;
+      document.querySelector("[data-save='classTitle']").addEventListener("input", event => {
+        state.classTitle = event.target.textContent.trim() || "우리 반 스마트 보드";
+        saveState();
+      });
+      document.querySelectorAll("[data-theme-btn]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          state.theme = btn.dataset.themeBtn;
+          saveState();
+          applyAppearance();
+        });
+      });
+      document.getElementById("bigTextBtn").addEventListener("click", () => {
+        state.bigText = !state.bigText;
+        saveState();
+        applyAppearance();
+      });
+      document.getElementById("darkBtn").addEventListener("click", () => {
+        state.dark = !state.dark;
+        saveState();
+        applyAppearance();
+      });
+      document.getElementById("saveJpgBtn").addEventListener("click", saveJpg);
+      document.getElementById("refreshAirBtn").addEventListener("click", refreshAir);
+      document.getElementById("addTaskBtn").addEventListener("click", () => {
+        state.tasks.push({ text: "새 할 일", done: false });
+        saveState();
+        renderTasks();
+      });
+    }
+
+    function init() {
+      applyAppearance();
+      bindEvents();
+      renderTimetable();
+      renderTasks();
+      renderFlow();
+      renderAir();
+      updateClock();
+      setInterval(updateClock, 1000);
+      setTimeout(refreshAir, 700);
+    }
+
+    init();
+  </script>
+</body>
+</html>
