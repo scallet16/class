@@ -1,1635 +1,489 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>우리 반 맞춤형 스마트 전광판</title>
   <style>
     :root {
-      --bg: #dfe8ef;
-      --card: #f4f6f8;
-      --card-2: #d7e5f2;
-      --card-3: #e9f1f8;
-      --text: #1d2631;
-      --muted: #667386;
-      --line: rgba(70, 97, 129, 0.14);
-      --shadow: 0 10px 24px rgba(109, 128, 149, 0.18);
-      --accent: #6cb6ff;
-      --accent-soft: #d9ecff;
-      --accent-strong: #3977d8;
-      --base: clamp(14px, 0.9vw, 18px);
-      --title: clamp(38px, 3vw, 58px);
-      --h2: clamp(19px, 1.3vw, 28px);
-      --big: clamp(38px, 4.3vw, 74px);
-      --flow-main: clamp(17px, 1.08vw, 23px);
-      --flow-time: clamp(12px, 0.82vw, 17px);
-      --cell: clamp(15px, 1.08vw, 24px);
-      --task: clamp(20px, 1.48vw, 30px);
+      --w: 1600px;
+      --h: 900px;
+      --bg: #f5efe5;
+      --card: rgba(255,255,255,.86);
+      --card2: #fff8e9;
+      --soft: #f4eadb;
+      --text: #233036;
+      --muted: #69737d;
+      --line: rgba(35,48,54,.11);
+      --shadow: 0 12px 34px rgba(56,45,32,.14);
+      --accent: #ff9f43;
+      --accent2: #ffecd2;
+      --accentText: #b9630d;
+      --orange: #ffd28d;
+      --green: #bfe8d4;
+      --danger: #ffd5d5;
     }
-
-    body[data-theme="pink"] {
-      --accent: #f49ac7;
-      --accent-soft: #fde8f2;
-      --accent-strong: #d75a9d;
-    }
-    body[data-theme="green"] {
-      --accent: #77d39a;
-      --accent-soft: #e5f8ec;
-      --accent-strong: #38a864;
-    }
-    body[data-theme="blue"] {
-      --accent: #6cb6ff;
-      --accent-soft: #d9ecff;
-      --accent-strong: #3977d8;
-    }
-    body[data-theme="orange"] {
-      --accent: #ffbf66;
-      --accent-soft: #fff0d8;
-      --accent-strong: #e48c2f;
-    }
+    body[data-theme="pink"] { --accent:#ff76a8; --accent2:#ffe1ec; --accentText:#c83d79; }
+    body[data-theme="green"] { --accent:#56bf8c; --accent2:#dbf5e9; --accentText:#1f8055; }
+    body[data-theme="blue"] { --accent:#5aa9f3; --accent2:#dceeff; --accentText:#246ab1; }
+    body[data-theme="orange"] { --accent:#ff9f43; --accent2:#ffecd2; --accentText:#b9630d; }
     body[data-dark="true"] {
-      --bg: #1a2028;
-      --card: #232b36;
-      --card-2: #293444;
-      --card-3: #2e394a;
-      --text: #f5f8fb;
-      --muted: #b4c0cf;
-      --line: rgba(255,255,255,0.1);
-      --shadow: 0 16px 28px rgba(0,0,0,0.22);
+      --bg:#17202a; --card:rgba(37,45,58,.92); --card2:#273344; --soft:#1f2937;
+      --text:#f3f7fb; --muted:#b8c3cf; --line:rgba(255,255,255,.12);
+      --shadow:0 18px 44px rgba(0,0,0,.34); --orange:#594424; --green:#1f4b3b; --danger:#503030;
     }
-    body[data-big="true"] {
-      --base: clamp(15px, 1vw, 21px);
-      --title: clamp(42px, 3.35vw, 66px);
-      --h2: clamp(21px, 1.42vw, 31px);
-      --big: clamp(44px, 4.7vw, 84px);
-      --flow-main: clamp(18px, 1.18vw, 25px);
-      --flow-time: clamp(13px, 0.88vw, 18px);
-      --cell: clamp(16px, 1.15vw, 26px);
-      --task: clamp(21px, 1.56vw, 32px);
-    }
-
     * { box-sizing: border-box; }
-    html, body {
-      width: 100%;
-      height: 100%;
-      margin: 0;
-      overflow: hidden;
-      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
-      background: var(--bg);
-      color: var(--text);
-    }
-    button, input, select { font: inherit; color: inherit; }
-
-    .app {
-      width: 100vw;
-      height: 100vh;
-      padding: 14px;
-      display: grid;
-      grid-template-rows: 84px 1fr;
-      gap: 14px;
-      overflow: hidden;
-    }
-
-    .glass {
-      background: var(--card);
-      border-radius: 32px;
-      box-shadow: var(--shadow);
-      border: 1px solid var(--line);
-    }
-
-    .topbar {
-      position: relative;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 0 18px;
-      overflow: hidden;
-    }
-
-    .title-wrap {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 16px;
-      max-width: calc(100% - 360px);
-      min-width: 0;
-    }
-
-    .class-title-input {
-      width: min(820px, 100%);
-      min-width: 220px;
-      border: none;
-      background: transparent;
-      outline: none;
-      font-size: var(--title);
-      line-height: 1;
-      font-weight: 900;
-      letter-spacing: -0.03em;
-      color: var(--accent);
-      text-align: center;
-      white-space: nowrap;
-      text-shadow: 0 1px 0 rgba(255,255,255,0.3);
-    }
-
-    .class-title-input::placeholder {
-      color: color-mix(in srgb, var(--accent) 65%, transparent);
-      opacity: 0.9;
-    }
-
-    .class-title-input:focus {
-      background: rgba(255,255,255,0.38);
-      border-radius: 24px;
-      box-shadow: inset 0 0 0 3px rgba(114, 177, 255, 0.28);
-    }
-
-    body[data-dark="true"] .class-title-input:focus {
-      background: rgba(255,255,255,0.06);
-    }
-
-    .sparkle {
-      font-size: clamp(28px, 2.2vw, 42px);
-      flex-shrink: 0;
-    }
-
-    .toolbar {
-      position: absolute;
-      right: 18px;
-      top: 50%;
-      transform: translateY(-50%);
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .theme-box, .tool-box {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 8px 14px;
-      border-radius: 999px;
-      background: rgba(255,255,255,0.55);
-      border: 1px solid var(--line);
-      box-shadow: 0 8px 18px rgba(0,0,0,0.06);
-    }
-    body[data-dark="true"] .theme-box,
-    body[data-dark="true"] .tool-box { background: rgba(255,255,255,0.06); }
-
-    .theme-dot {
-      width: 28px;
-      height: 28px;
-      border-radius: 50%;
-      border: 2px solid rgba(255,255,255,0.85);
-      box-shadow: 0 2px 8px rgba(0,0,0,0.12);
-      cursor: pointer;
-    }
-    .theme-dot.pink { background: #f49ac7; }
-    .theme-dot.green { background: #62c79b; }
-    .theme-dot.blue { background: #5eaef5; }
-    .theme-dot.orange { background: #f6b24e; }
-    .theme-dot.active { outline: 3px solid rgba(0,0,0,0.14); }
-
-    .icon-btn, .save-btn {
-      border: none;
-      background: transparent;
-      cursor: pointer;
-      font-weight: 800;
-    }
-    .icon-btn {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      display: grid;
-      place-items: center;
-      font-size: 18px;
-    }
-    .save-btn {
-      background: #5b5ce6;
-      color: #fff;
-      padding: 13px 18px;
-      border-radius: 18px;
-      box-shadow: 0 8px 16px rgba(91,92,230,0.25);
-      white-space: nowrap;
-    }
-
-    .main {
-      display: grid;
-      grid-template-columns: 1fr 0.98fr 0.98fr;
-      gap: 14px;
-      min-height: 0;
-      overflow: hidden;
-    }
-
-    .col { min-height: 0; display: grid; gap: 14px; overflow: hidden; }
-    .left-col { grid-template-rows: 1fr 154px; }
-    .mid-col { grid-template-rows: minmax(0, 1fr); }
-    .right-col { grid-template-rows: minmax(0, 1fr) 220px; }
-
-    .card {
-      min-height: 0;
-      padding: 14px 16px 16px;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-
-    .card-head {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      margin-bottom: 12px;
-      flex-shrink: 0;
-      min-height: 34px;
-    }
-    .card-title {
-      font-size: var(--h2);
-      font-weight: 900;
-      letter-spacing: -0.03em;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      white-space: nowrap;
-    }
-    .mini-actions {
-      display: flex;
-      gap: 6px;
-      align-items: center;
-      flex-shrink: 0;
-    }
-    .mini-action {
-      border: none;
-      min-width: 34px;
-      height: 34px;
-      padding: 0 10px;
-      border-radius: 999px;
-      background: linear-gradient(180deg, #3b7cff, #3662de);
-      color: #fff;
-      font-size: 15px;
-      font-weight: 900;
-      line-height: 1;
-      cursor: pointer;
-      display: grid;
-      place-items: center;
-      box-shadow: 0 8px 14px rgba(59,124,255,0.2);
-      white-space: nowrap;
-    }
-    .mini-action.round { width: 34px; padding: 0; font-size: 22px; }
-
-    .schedule-wrap {
-      min-height: 0;
-      height: 100%;
-    }
-    .schedule-table {
-      width: 100%;
-      height: 100%;
-      border-collapse: separate;
-      border-spacing: 8px 9px;
-      table-layout: fixed;
-    }
-    .schedule-table th,
-    .schedule-table td {
-      text-align: center;
-      vertical-align: middle;
-      border-radius: 18px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .schedule-table thead th.day {
-      background: var(--card-3);
-      border: 1px solid var(--line);
-      font-size: var(--cell);
-      font-weight: 900;
-      padding: 10px 6px;
-      color: var(--text);
-    }
-    .schedule-table thead th.corner,
-    .schedule-table tbody th {
-      background: transparent;
-      border: none;
-      color: var(--muted);
-      font-size: clamp(14px, 0.95vw, 19px);
-      font-weight: 900;
-      width: 66px;
-    }
-    .schedule-table td {
-      background: transparent;
-      border: 2px dashed #80baff;
-      padding: 8px 4px;
-      font-size: var(--cell);
-      font-weight: 900;
-      outline: none;
-      min-height: 56px;
-      cursor: text;
-    }
-    body[data-dark="true"] .schedule-table td { border-color: rgba(138,190,255,0.8); }
-    .schedule-table td:focus,
-    .task-text:focus {
-      box-shadow: inset 0 0 0 3px rgba(114, 177, 255, 0.3);
-      background: rgba(255,255,255,0.45);
-    }
-    body[data-dark="true"] .schedule-table td:focus,
-    body[data-dark="true"] .task-text:focus {
-      background: rgba(255,255,255,0.06);
-    }
-    .schedule-table td.now {
-      background: var(--accent-soft);
-      border-style: solid;
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(255,255,255,0.9) inset;
-    }
-
-    .bottom-cards {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px;
-      min-height: 0;
-    }
-
-    .clock-card, .air-card {
-      padding: 14px 16px;
-    }
-    .clock-inner {
-      height: 100%;
-      display: grid;
-      grid-template-rows: auto 1fr;
-      align-items: center;
-    }
-    .date-line {
-      font-size: clamp(19px, 1.22vw, 28px);
-      color: var(--muted);
-      font-weight: 900;
-      text-align: center;
-    }
-    .time-line {
-      font-size: var(--big);
-      line-height: 1;
-      font-weight: 900;
-      color: var(--accent);
-      letter-spacing: -0.05em;
-      text-align: center;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .weather-head {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-      margin-bottom: 8px;
-      flex-shrink: 0;
-    }
-    .weather-location-btn {
-      min-width: 0;
-      border: none;
-      background: var(--accent-soft);
-      color: var(--accent-strong);
-      border-radius: 999px;
-      padding: 8px 12px;
-      font-size: clamp(14px, 0.92vw, 18px);
-      font-weight: 950;
-      cursor: pointer;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      text-align: left;
-    }
-    .weather-location-btn::after {
-      content: "  변경";
-      color: var(--muted);
-      font-size: 0.78em;
-      font-weight: 900;
-    }
-    .weather-panel {
-      flex: 1;
-      min-height: 0;
-      display: grid;
-      grid-template-columns: 0.92fr 1.08fr;
-      gap: 10px;
-    }
-    .weather-main {
-      background: var(--card-3);
-      border-radius: 20px;
-      border: 1px solid var(--line);
-      padding: 10px 8px;
-      min-height: 0;
-      display: grid;
-      grid-template-columns: auto 1fr;
-      grid-template-rows: auto auto;
-      align-items: center;
-      gap: 2px 8px;
-    }
-    .weather-emoji {
-      grid-row: 1 / 3;
-      font-size: clamp(30px, 2.6vw, 48px);
-      line-height: 1;
-    }
-    .weather-temp {
-      font-size: clamp(24px, 2vw, 40px);
-      font-weight: 950;
-      line-height: 1;
-      letter-spacing: -0.04em;
-    }
-    .weather-desc {
-      font-size: clamp(13px, 0.88vw, 17px);
-      color: var(--muted);
-      font-weight: 900;
-      line-height: 1.15;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .weather-detail {
-      grid-column: 1 / 3;
-      margin-top: 3px;
-      font-size: clamp(11px, 0.72vw, 14px);
-      color: var(--muted);
-      font-weight: 850;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      text-align: center;
-    }
-    .air-grid {
-      display: grid;
-      grid-template-rows: 1fr 1fr;
-      gap: 8px;
-      height: 100%;
-      min-height: 0;
-    }
-    .air-box {
-      background: var(--card-3);
-      border-radius: 18px;
-      border: 1px solid var(--line);
-      padding: 8px 9px;
-      display: grid;
-      grid-template-columns: minmax(54px, 0.8fr) auto minmax(74px, 1fr);
-      gap: 7px;
-      align-items: center;
-      text-align: center;
-      min-height: 0;
-    }
-    .air-label {
-      font-size: clamp(12px, 0.8vw, 15px);
-      color: var(--muted);
-      font-weight: 900;
-      white-space: nowrap;
-    }
-    .air-value {
-      font-size: clamp(24px, 1.65vw, 36px);
-      font-weight: 950;
-      line-height: 1;
-      min-width: 32px;
-    }
-    .air-badge {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 4px;
-      margin: 0 auto;
-      padding: 6px 9px;
-      border-radius: 999px;
-      font-size: clamp(12px, 0.82vw, 16px);
-      font-weight: 900;
-      background: #daf1dd;
-      color: #1f7e31;
-      min-width: 72px;
-      white-space: nowrap;
-    }
-
-    .flow-list {
-      display: grid;
-      grid-template-rows: repeat(11, minmax(0, 1fr));
-      gap: 8px;
-      min-height: 0;
-      height: 100%;
-    }
-    .flow-item {
-      min-height: 0;
-      background: var(--card-2);
-      border-radius: 22px;
-      border: 1px solid transparent;
-      padding: 5px 14px 6px;
-      display: grid;
-      grid-template-rows: auto 1fr;
-      align-items: center;
-      justify-items: center;
-      text-align: center;
-      overflow: hidden;
-    }
-    .flow-time {
-      font-size: var(--flow-time);
-      color: var(--muted);
-      font-weight: 900;
-      line-height: 1;
-      white-space: nowrap;
-      margin-bottom: 2px;
-    }
-    .flow-name {
-      width: 100%;
-      min-height: 0;
-      font-size: var(--flow-main);
-      font-weight: 950;
-      letter-spacing: -0.03em;
-      line-height: 1.05;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .flow-item.current {
-      background: #fff6df;
-      border-color: var(--accent);
-      box-shadow: inset 0 0 0 3px rgba(255,255,255,0.8);
-    }
-    body[data-dark="true"] .flow-item.current { background: rgba(255,255,255,0.11); }
-
-    .task-list {
-      display: grid;
-      grid-auto-rows: minmax(70px, auto);
-      gap: 10px;
-      min-height: 0;
-      align-content: start;
-      overflow: hidden;
-    }
-    .task {
-      background: var(--card-2);
-      border-radius: 22px;
-      padding: 10px 14px;
-      display: grid;
-      grid-template-columns: auto 1fr auto;
-      align-items: center;
-      gap: 12px;
-      min-height: 0;
-    }
-    .check {
-      width: 34px;
-      height: 34px;
-      border: 2px solid #a1a1a1;
-      border-radius: 4px;
-      background: transparent;
-      display: grid;
-      place-items: center;
-      cursor: pointer;
-      color: transparent;
-      font-size: 24px;
-      font-weight: 900;
-      padding: 0;
-    }
-    .task.done .check {
-      background: #6b6cf0;
-      border-color: #6b6cf0;
-      color: #fff;
-    }
-    .task-text {
-      outline: none;
-      font-size: var(--task);
-      font-weight: 900;
-      letter-spacing: -0.03em;
-      line-height: 1.15;
-      min-width: 0;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .task.done .task-text {
-      color: #98a1af;
-      text-decoration: line-through;
-      text-decoration-thickness: 3px;
-    }
-    .delete {
-      border: none;
-      width: 28px;
-      height: 28px;
-      border-radius: 50%;
-      background: rgba(255,255,255,0.7);
-      font-weight: 900;
-      cursor: pointer;
-      color: var(--muted);
-    }
-    body[data-dark="true"] .delete { background: rgba(255,255,255,0.08); }
-    .task-footer {
-      margin-top: auto;
-      display: flex;
-      justify-content: flex-end;
-      gap: 8px;
-      padding-top: 10px;
-    }
-    .small-btn {
-      border: none;
-      background: var(--accent-soft);
-      padding: 10px 14px;
-      border-radius: 999px;
-      font-weight: 900;
-      cursor: pointer;
-    }
-
-    .meal-card {
-      padding-bottom: 14px;
-    }
-    .meal-meta {
-      color: var(--muted);
-      font-size: clamp(12px, 0.82vw, 15px);
-      font-weight: 850;
-      white-space: nowrap;
-    }
-    .meal-menu {
-      min-height: 0;
-      flex: 1;
-      display: flex;
-      flex-wrap: wrap;
-      align-content: flex-start;
-      gap: 8px;
-      overflow: hidden;
-    }
-    .meal-chip {
-      display: inline-flex;
-      align-items: center;
-      min-height: 38px;
-      max-width: 100%;
-      border-radius: 999px;
-      background: var(--card-2);
-      border: 1px solid var(--line);
-      padding: 8px 12px;
-      font-size: clamp(16px, 1.02vw, 22px);
-      font-weight: 900;
-      letter-spacing: -0.02em;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .meal-empty {
-      width: 100%;
-      height: 100%;
-      display: grid;
-      place-items: center;
-      text-align: center;
-      color: var(--muted);
-      font-size: clamp(17px, 1.1vw, 23px);
-      font-weight: 900;
-      line-height: 1.25;
-    }
-
-    .empty-state {
-      display: grid;
-      place-items: center;
-      border-radius: 24px;
-      border: 2px dashed var(--line);
-      color: var(--muted);
-      font-size: 22px;
-      font-weight: 900;
-      min-height: 120px;
-    }
-
-    .capture-mode .toolbar,
-    .capture-mode .task-footer,
-    .capture-mode .delete,
-    .capture-mode .mini-actions,
-    .capture-mode #refreshWeatherAir {
-      display: none !important;
-    }
-    .capture-mode .title-wrap { max-width: 100%; }
-
-    @media (max-width: 1200px) {
-      html, body { overflow: auto; }
-      .app { height: auto; min-height: 100vh; overflow: visible; }
-      .main { grid-template-columns: 1fr; overflow: visible; }
-      .left-col, .right-col { grid-template-rows: auto auto; }
-      .mid-col { min-height: 720px; }
-      .flow-list { grid-template-rows: repeat(11, 58px); }
-      .title-wrap { max-width: calc(100% - 20px); }
-      .toolbar { position: static; transform: none; margin-left: auto; }
-      .topbar { flex-direction: column; gap: 10px; padding: 12px; height: auto; }
-    }
+    html, body { width:100%; height:100%; margin:0; overflow:hidden; }
+    body {
+      font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Apple SD Gothic Neo","Noto Sans KR",Arial,sans-serif;
+      color:var(--text);
+      background:radial-gradient(circle at 8% 12%, rgba(255,255,255,.55), transparent 28%), var(--bg);
+    }
+    input, button { font:inherit; color:inherit; }
+    button { -webkit-tap-highlight-color:transparent; }
+    .viewport { position:fixed; inset:0; overflow:hidden; background:var(--bg); }
+    .board {
+      position:absolute; left:50%; top:50%; width:var(--w); height:var(--h);
+      transform:translate(-50%, -50%) scale(var(--scale, 1)); transform-origin:center center;
+      padding:18px; display:grid; grid-template-rows:84px 1fr; gap:14px;
+    }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:26px; box-shadow:var(--shadow); overflow:hidden; }
+    .topbar { display:grid; grid-template-columns:1fr auto; gap:14px; align-items:center; padding:10px 12px 10px 24px; }
+    .titleInput {
+      width:100%; min-width:0; border:0; outline:0; background:transparent; color:var(--text);
+      font-size:48px; line-height:1; font-weight:950; letter-spacing:0; padding:6px 8px; border-radius:18px;
+    }
+    .titleInput:focus { background:rgba(255,255,255,.45); box-shadow:0 0 0 4px var(--accent2) inset; }
+    body[data-dark="true"] .titleInput:focus { background:rgba(255,255,255,.07); }
+    .toolbar { display:flex; gap:10px; align-items:center; }
+    .pillbox { display:flex; align-items:center; gap:9px; padding:8px 10px; background:rgba(255,255,255,.66); border-radius:999px; box-shadow:0 8px 20px rgba(0,0,0,.07); }
+    body[data-dark="true"] .pillbox { background:rgba(255,255,255,.08); }
+    .dot { width:34px; height:34px; border-radius:50%; border:3px solid rgba(255,255,255,.9); cursor:pointer; box-shadow:0 3px 8px rgba(0,0,0,.16); }
+    .dot.pink{background:#ff76a8}.dot.green{background:#56bf8c}.dot.blue{background:#5aa9f3}.dot.orange{background:#ff9f43}
+    .dot.active { outline:4px solid rgba(35,48,54,.18); }
+    .toolbtn { border:0; background:rgba(255,255,255,.74); min-width:44px; height:44px; border-radius:16px; cursor:pointer; font-size:22px; font-weight:950; display:grid; place-items:center; }
+    body[data-dark="true"] .toolbtn { background:rgba(255,255,255,.08); }
+    .main { min-height:0; display:grid; grid-template-columns:610px 494px 1fr; gap:14px; }
+    .left, .center, .right { min-height:0; display:grid; gap:14px; }
+    .left { grid-template-rows:296px 78px 1fr; }
+    .center { grid-template-rows:532px 1fr; }
+    .right { grid-template-rows:220px 1fr; }
+    .bottom { display:grid; grid-template-columns:235px 1fr; gap:14px; min-height:0; }
+    .card-inner { height:100%; padding:18px; display:flex; flex-direction:column; min-height:0; }
+    .head { height:36px; flex:0 0 auto; display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:10px; }
+    .h { font-size:28px; line-height:1; font-weight:950; letter-spacing:0; white-space:nowrap; }
+    .sub { font-size:16px; color:var(--muted); font-weight:850; white-space:nowrap; }
+    .miniBtn { border:0; background:var(--accent2); color:var(--accentText); font-size:17px; font-weight:950; height:34px; padding:0 13px; border-radius:999px; cursor:pointer; }
+    .bookCard { background:linear-gradient(135deg, rgba(255,255,255,.88), var(--accent2)); }
+    .bookBox { height:100%; padding:14px 18px; display:grid; grid-template-columns:auto 1fr; align-items:center; gap:14px; }
+    .bookLabel { font-size:25px; line-height:1; font-weight:950; white-space:nowrap; }
+    .bookInput { width:100%; min-width:0; height:46px; border:0; outline:0; background:rgba(255,255,255,.62); border-radius:18px; padding:0 16px; color:var(--accentText); font-size:29px; font-weight:950; }
+    .bookInput:focus { background:#fff; box-shadow:0 0 0 4px rgba(255,255,255,.75), 0 0 0 7px var(--accent2); }
+    body[data-dark="true"] .bookInput { background:rgba(255,255,255,.08); color:var(--text); }
+    .timetable { flex:1; min-height:0; display:grid; grid-template-rows:38px repeat(6, 1fr); gap:7px; }
+    .trow { display:grid; grid-template-columns:70px repeat(5, 1fr); gap:7px; min-height:0; }
+    .tcell, .thead, .period { border-radius:16px; display:flex; align-items:center; justify-content:center; min-width:0; overflow:hidden; font-weight:950; }
+    .thead { background:var(--soft); color:var(--muted); font-size:20px; }
+    .period { color:var(--accentText); background:var(--accent2); font-size:19px; }
+    .subjectInput {
+      width:100%; height:100%; min-width:0; border:1px solid var(--line); outline:0; border-radius:16px;
+      background:#fff8e7; text-align:center; font-size:21px; font-weight:950; padding:0 5px;
+    }
+    body[data-dark="true"] .subjectInput { background:rgba(255,255,255,.06); }
+    .subjectInput:focus { background:#fff; box-shadow:0 0 0 4px var(--accent2) inset; }
+    .subjectInput.now { background:var(--accent); color:white; border-color:transparent; box-shadow:0 9px 20px rgba(0,0,0,.14); }
+    .clockCard .card-inner { justify-content:center; text-align:center; padding:12px; }
+    .date { color:var(--muted); font-size:22px; font-weight:950; }
+    .time { margin-top:10px; color:var(--accent); font-size:68px; line-height:.92; font-weight:950; font-variant-numeric:tabular-nums; }
+    .weatherGrid { flex:1; min-height:0; display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:10px; }
+    .weatherBox { background:var(--card2); border:1px solid var(--line); border-radius:20px; padding:12px; display:flex; flex-direction:column; justify-content:center; text-align:center; min-height:0; }
+    .emoji { font-size:40px; line-height:1; }
+    .weatherMain { font-size:30px; line-height:1.05; font-weight:950; margin-top:8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .weatherSmall { font-size:16px; color:var(--muted); font-weight:850; margin-top:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .regionBtn { border:0; background:transparent; color:var(--accentText); font-size:18px; font-weight:950; cursor:pointer; padding:4px 0; }
+    .flowList { flex:1; min-height:0; display:grid; grid-template-rows:repeat(11, 1fr); gap:6px; }
+    .flowItem { min-height:0; border:1px solid var(--line); background:var(--card2); border-radius:17px; display:grid; grid-template-columns:122px 1fr; align-items:center; gap:8px; padding:7px 12px; overflow:hidden; }
+    .flowItem.current { background:var(--orange); border-color:rgba(0,0,0,.05); box-shadow:0 10px 20px rgba(0,0,0,.11); }
+    .flowTime { color:var(--muted); font-size:17px; font-weight:950; white-space:nowrap; }
+    .flowName { min-width:0; font-size:24px; line-height:1.05; font-weight:950; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .mealList { flex:1; min-height:0; display:flex; flex-wrap:wrap; gap:9px; align-content:flex-start; overflow:hidden; }
+    .mealChip { background:var(--accent2); color:var(--accentText); border-radius:999px; padding:9px 13px; font-size:18px; line-height:1; font-weight:950; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .mealEmpty { color:var(--muted); font-size:20px; font-weight:900; padding-top:10px; }
+    .nowBox { height:100%; background:linear-gradient(135deg, var(--orange), #ffe5af); border-radius:26px; padding:24px; display:flex; flex-direction:column; justify-content:center; box-shadow:var(--shadow); }
+    body[data-dark="true"] .nowBox { background:linear-gradient(135deg, #4d3820, #5a452c); }
+    .nowLabel { font-size:28px; font-weight:950; color:rgba(35,48,54,.78); }
+    body[data-dark="true"] .nowLabel { color:#f6efe1; }
+    .nowTitle { font-size:60px; line-height:1; font-weight:950; margin:10px 0 12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .nowSub { font-size:31px; line-height:1.05; font-weight:950; color:rgba(35,48,54,.74); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    body[data-dark="true"] .nowSub { color:#eadfcf; }
+    .taskList { flex:1; min-height:0; display:grid; grid-auto-rows:minmax(68px, auto); gap:10px; align-content:start; overflow:hidden; }
+    .task { background:var(--card2); border:1px solid var(--line); border-radius:20px; min-height:68px; display:grid; grid-template-columns:42px 1fr 38px; gap:10px; align-items:center; padding:9px 10px; }
+    .check { width:34px; height:34px; border:3px solid #a8a8a8; border-radius:6px; background:white; color:transparent; cursor:pointer; display:grid; place-items:center; font-size:25px; font-weight:950; }
+    body[data-dark="true"] .check { background:rgba(255,255,255,.08); }
+    .task.done .check { background:#696bf0; border-color:#696bf0; color:white; }
+    .taskInput { width:100%; min-width:0; border:0; outline:0; background:transparent; font-size:25px; font-weight:950; }
+    .task.done .taskInput { color:#9aa1a9; text-decoration:line-through; text-decoration-thickness:3px; }
+    .trash { border:0; width:34px; height:34px; border-radius:13px; background:rgba(255,255,255,.65); cursor:pointer; font-size:18px; }
+    .addTask { margin-top:auto; height:42px; border:0; border-radius:18px; background:linear-gradient(90deg, var(--green), #ffd96c); color:#12222c; font-size:19px; font-weight:950; cursor:pointer; }
+    .modalBackdrop { position:fixed; inset:0; background:rgba(0,0,0,.30); display:none; align-items:center; justify-content:center; z-index:20; }
+    .modalBackdrop.show { display:flex; }
+    .modal { width:min(540px, calc(100vw - 36px)); background:var(--card); border:1px solid var(--line); border-radius:28px; box-shadow:0 22px 60px rgba(0,0,0,.24); padding:22px; color:var(--text); }
+    .modal h2 { margin:0 0 10px; font-size:28px; }
+    .modal p { margin:0 0 14px; color:var(--muted); font-weight:800; line-height:1.45; }
+    .modal input { width:100%; height:54px; border:1px solid var(--line); background:rgba(255,255,255,.70); border-radius:18px; padding:0 16px; outline:0; font-size:23px; font-weight:900; }
+    .modalActions { display:flex; justify-content:flex-end; gap:10px; margin-top:14px; }
+    .modalActions button { border:0; border-radius:16px; height:45px; padding:0 18px; font-weight:950; cursor:pointer; }
+    .cancel { background:var(--soft); }
+    .ok { background:var(--accent); color:white; }
+    .capture .toolbar, .capture .miniBtn, .capture .trash, .capture .addTask { display:none !important; }
   </style>
 </head>
-<body data-theme="blue" data-dark="false" data-big="true">
-  <div class="app" id="captureArea">
-    <header class="topbar glass">
-      <div class="title-wrap">
-        <input id="classTitle" class="class-title-input" type="text" maxlength="28" placeholder="우리 반 이름을 입력하세요" aria-label="우리 반 이름" />
-        <div class="sparkle">✨</div>
-      </div>
-      <div class="toolbar">
-        <div class="theme-box" aria-label="테마 선택">
-          <button class="theme-dot pink" data-theme-btn="pink" title="분홍 테마"></button>
-          <button class="theme-dot green" data-theme-btn="green" title="초록 테마"></button>
-          <button class="theme-dot blue" data-theme-btn="blue" title="파랑 테마"></button>
-          <button class="theme-dot orange" data-theme-btn="orange" title="주황 테마"></button>
-          <button class="icon-btn" id="darkToggle" title="다크모드">🌙</button>
-        </div>
-        <div class="tool-box">
-          <button class="icon-btn" id="bigToggle" title="왕글자 모드">🔎</button>
-          <button class="save-btn" id="saveJpg">📷 JPG 저장</button>
-        </div>
-      </div>
-    </header>
-
-    <main class="main">
-      <section class="col left-col">
-        <article class="card glass">
-          <div class="card-head">
-            <div class="card-title">📘 주간 시간표</div>
+<body data-theme="orange" data-dark="false">
+  <div class="viewport">
+    <div class="board" id="board">
+      <header class="topbar card">
+        <input id="titleInput" class="titleInput" value="용기 뿜뿜 통합교육1반" aria-label="우리 반 이름">
+        <div class="toolbar">
+          <div class="pillbox">
+            <button class="dot pink" data-theme="pink" title="분홍"></button>
+            <button class="dot green" data-theme="green" title="초록"></button>
+            <button class="dot blue" data-theme="blue" title="파랑"></button>
+            <button class="dot orange" data-theme="orange" title="주황"></button>
           </div>
-          <div class="schedule-wrap">
-            <table class="schedule-table" id="scheduleTable"></table>
+          <div class="pillbox">
+            <button class="toolbtn" id="bigBtn" title="왕글자">T</button>
+            <button class="toolbtn" id="darkBtn" title="밤 모드">☾</button>
+            <button class="toolbtn" id="saveBtn" title="JPG 저장">↓</button>
           </div>
-        </article>
+        </div>
+      </header>
 
-        <section class="bottom-cards">
-          <article class="card glass clock-card">
-            <div class="clock-inner">
-              <div class="date-line" id="dateLine">-</div>
-              <div class="time-line" id="timeLine">00:00</div>
+      <main class="main">
+        <section class="left">
+          <article class="card">
+            <div class="card-inner">
+              <div class="head"><div class="h">주간 시간표</div><div class="sub">과목 클릭해서 수정</div></div>
+              <div class="timetable" id="timetable"></div>
             </div>
           </article>
-
-          <article class="card glass air-card">
-            <div class="weather-head">
-              <button class="weather-location-btn" id="weatherLocationBtn" title="지역을 클릭해서 날씨·미세먼지 지역 변경">📍 경기도 이천시</button>
-              <button class="mini-action round" id="refreshWeatherAir" title="날씨·미세먼지 새로고침">↻</button>
-            </div>
-            <div class="weather-panel">
-              <div class="weather-main">
-                <div class="weather-emoji" id="weatherEmoji">⛅</div>
-                <div class="weather-temp" id="weatherTemp">-°</div>
-                <div class="weather-desc" id="weatherDesc">날씨 확인</div>
-                <div class="weather-detail" id="weatherDetail">지역을 눌러 변경</div>
-              </div>
-              <div class="air-grid">
-                <div class="air-box">
-                  <div class="air-label">미세</div>
-                  <div class="air-value" id="pm10Value">-</div>
-                  <div class="air-badge" id="pm10Badge">📡 확인</div>
-                </div>
-                <div class="air-box">
-                  <div class="air-label">초미세</div>
-                  <div class="air-value" id="pm25Value">-</div>
-                  <div class="air-badge" id="pm25Badge">📡 확인</div>
-                </div>
-              </div>
+          <article class="card bookCard">
+            <div class="bookBox">
+              <div class="bookLabel">📚 오늘의 동화책:</div>
+              <input id="bookInput" class="bookInput" value="빙글빙글" placeholder="책 제목 입력" aria-label="오늘의 동화책 제목">
             </div>
           </article>
+          <section class="bottom">
+            <article class="card clockCard"><div class="card-inner"><div class="date" id="dateText">-</div><div class="time" id="timeText">00:00</div></div></article>
+            <article class="card"><div class="card-inner">
+              <div class="head"><div class="h">날씨 · 대기</div><button class="miniBtn regionBtn" id="regionBtn">📍 이천</button></div>
+              <div class="weatherGrid">
+                <div class="weatherBox"><div class="emoji" id="weatherEmoji">🌤️</div><div class="weatherMain" id="tempText">--℃</div><div class="weatherSmall" id="weatherText">날씨 확인 중</div></div>
+                <div class="weatherBox"><div class="emoji">💧</div><div class="weatherMain" id="humidityText">--%</div><div class="weatherSmall" id="windText">바람 --</div></div>
+                <div class="weatherBox"><div class="emoji">😷</div><div class="weatherMain" id="pm10Text">--</div><div class="weatherSmall" id="pm10Grade">미세먼지</div></div>
+                <div class="weatherBox"><div class="emoji">🍃</div><div class="weatherMain" id="pm25Text">--</div><div class="weatherSmall" id="pm25Grade">초미세먼지</div></div>
+              </div>
+            </div></article>
+          </section>
         </section>
-      </section>
 
-      <section class="col mid-col">
-        <article class="card glass">
-          <div class="card-head">
-            <div class="card-title">⏳ 오늘의 흐름</div>
-          </div>
-          <div class="flow-list" id="flowList"></div>
-        </article>
-      </section>
+        <section class="center">
+          <article class="card"><div class="card-inner">
+            <div class="head"><div class="h">오늘의 흐름</div><div class="sub" id="weekdayText">-</div></div>
+            <div class="flowList" id="flowList"></div>
+          </div></article>
+          <article class="card"><div class="card-inner">
+            <div class="head"><div class="h">오늘의 급식</div><button class="miniBtn" id="schoolBtn">학교 설정</button></div>
+            <div class="mealList" id="mealList"><div class="mealEmpty">급식 정보를 불러오는 중</div></div>
+          </div></article>
+        </section>
 
-      <section class="col right-col">
-        <article class="card glass">
-          <div class="card-head">
-            <div class="card-title">📢 선생님 지시사항</div>
-            <div class="mini-actions">
-              <button class="mini-action round" id="addTask" title="할 일 추가">＋</button>
-            </div>
-          </div>
-          <div class="task-list" id="taskList"></div>
-          <div class="task-footer">
-            <button class="small-btn" id="resetDone">체크만 초기화</button>
-          </div>
-        </article>
+        <section class="right">
+          <article class="nowBox"><div class="nowLabel">지금은</div><div class="nowTitle" id="nowTitle">수업 전후</div><div class="nowSub" id="nowSub">다음 활동을 준비해요</div></article>
+          <article class="card"><div class="card-inner">
+            <div class="head"><div class="h">오늘의 할 일</div><div class="sub">체크 가능</div></div>
+            <div class="taskList" id="taskList"></div>
+            <button class="addTask" id="addTaskBtn">+ 할 일 추가</button>
+          </div></article>
+        </section>
+      </main>
+    </div>
+  </div>
 
-        <article class="card glass meal-card">
-          <div class="card-head">
-            <div>
-              <div class="card-title">🍱 오늘의 급식</div>
-              <div class="meal-meta" id="mealMeta">오늘 점심 메뉴</div>
-            </div>
-            <div class="mini-actions">
-              <button class="mini-action" id="mealSettings" title="학교 설정">학교</button>
-              <button class="mini-action round" id="refreshMeal" title="급식 새로고침">↻</button>
-            </div>
-          </div>
-          <div class="meal-menu" id="mealMenu">
-            <div class="meal-empty">급식 정보를 불러오는 중이에요.</div>
-          </div>
-        </article>
-      </section>
-    </main>
+  <div class="modalBackdrop" id="regionModal">
+    <div class="modal">
+      <h2>지역 바꾸기</h2>
+      <p>날씨와 미세먼지를 볼 지역명을 입력하세요. 예: 이천, 서울, 부산, 제주<br>현재 위치를 쓰려면 <b>현재위치</b>라고 입력하세요.</p>
+      <input id="regionInput" placeholder="예: 이천">
+      <div class="modalActions"><button class="cancel" data-close-modal>취소</button><button class="ok" id="regionOk">적용</button></div>
+    </div>
   </div>
 
   <script>
-    const STORAGE_KEY = 'smart_board_style_v3';
-    const DAYS = [
-      { key: 'mon', label: '월' },
-      { key: 'tue', label: '화' },
-      { key: 'wed', label: '수' },
-      { key: 'thu', label: '목' },
-      { key: 'fri', label: '금' }
-    ];
-
+    const DESIGN_W = 1600;
+    const DESIGN_H = 900;
+    const STORAGE = "smart_class_board_netlify_v2";
+    const DAYS = [["mon","월"],["tue","화"],["wed","수"],["thu","목"],["fri","금"]];
     const SLOTS = [
-      { start: '08:30', end: '09:00', type: 'event', label: '아침 활동 🌞' },
-      { start: '09:00', end: '09:40', type: 'period', period: 1 },
-      { start: '09:40', end: '09:50', type: 'event', label: '쉬는 시간 🥤' },
-      { start: '09:50', end: '10:30', type: 'period', period: 2 },
-      { start: '10:30', end: '10:40', type: 'event', label: '쉬는 시간 🏀' },
-      { start: '10:40', end: '11:20', type: 'period', period: 3 },
-      { start: '11:20', end: '11:30', type: 'event', label: '쉬는 시간 🍎' },
-      { start: '11:30', end: '12:10', type: 'period', period: 4 },
-      { start: '12:10', end: '13:00', type: 'event', label: '점심 시간 🍱' },
-      { start: '13:00', end: '13:40', type: 'period', period: 5 },
-      { start: '13:50', end: '14:30', type: 'period', period: 6 }
+      {s:"08:30", e:"09:00", type:"event", label:"아침자습", sub:"차분히 준비"},
+      {s:"09:00", e:"09:40", type:"period", p:1},
+      {s:"09:40", e:"09:50", type:"event", label:"쉬는시간", sub:"물 마시기"},
+      {s:"09:50", e:"10:30", type:"period", p:2},
+      {s:"10:30", e:"10:40", type:"event", label:"쉬는시간", sub:"다음 수업 준비"},
+      {s:"10:40", e:"11:20", type:"period", p:3},
+      {s:"11:20", e:"11:30", type:"event", label:"쉬는시간", sub:"화장실 다녀오기"},
+      {s:"11:30", e:"12:10", type:"period", p:4},
+      {s:"12:10", e:"13:00", type:"event", label:"점심시간", sub:"맛있게 먹기"},
+      {s:"13:00", e:"13:40", type:"period", p:5},
+      {s:"13:50", e:"14:30", type:"period", p:6}
     ];
-
-    const KOREA_LOCATIONS = [
-      { key: ['서울', '서울특별시'], name: '서울특별시', lat: 37.5665, lon: 126.9780 },
-      { key: ['부산', '부산광역시'], name: '부산광역시', lat: 35.1796, lon: 129.0756 },
-      { key: ['대구', '대구광역시'], name: '대구광역시', lat: 35.8714, lon: 128.6014 },
-      { key: ['인천', '인천광역시'], name: '인천광역시', lat: 37.4563, lon: 126.7052 },
-      { key: ['광주', '광주광역시'], name: '광주광역시', lat: 35.1595, lon: 126.8526 },
-      { key: ['대전', '대전광역시'], name: '대전광역시', lat: 36.3504, lon: 127.3845 },
-      { key: ['울산', '울산광역시'], name: '울산광역시', lat: 35.5384, lon: 129.3114 },
-      { key: ['세종', '세종특별자치시'], name: '세종특별자치시', lat: 36.4800, lon: 127.2890 },
-      { key: ['제주', '제주시', '제주도'], name: '제주시', lat: 33.4996, lon: 126.5312 },
-      { key: ['수원', '수원시'], name: '수원시', lat: 37.2636, lon: 127.0286 },
-      { key: ['이천', '이천시'], name: '경기도 이천시', lat: 37.2723, lon: 127.4350 },
-      { key: ['용인', '용인시'], name: '용인시', lat: 37.2411, lon: 127.1776 },
-      { key: ['성남', '성남시'], name: '성남시', lat: 37.4200, lon: 127.1265 },
-      { key: ['청주', '청주시'], name: '청주시', lat: 36.6424, lon: 127.4890 },
-      { key: ['춘천', '춘천시'], name: '춘천시', lat: 37.8813, lon: 127.7298 },
-      { key: ['전주', '전주시'], name: '전주시', lat: 35.8242, lon: 127.1480 }
+    const REGIONS = [
+      {name:"이천", lat:37.2723, lon:127.4350},
+      {name:"서울", lat:37.5665, lon:126.9780},
+      {name:"부산", lat:35.1796, lon:129.0756},
+      {name:"대구", lat:35.8714, lon:128.6014},
+      {name:"인천", lat:37.4563, lon:126.7052},
+      {name:"광주", lat:35.1595, lon:126.8526},
+      {name:"대전", lat:36.3504, lon:127.3845},
+      {name:"울산", lat:35.5384, lon:129.3114},
+      {name:"세종", lat:36.4800, lon:127.2890},
+      {name:"제주", lat:33.4996, lon:126.5312},
+      {name:"수원", lat:37.2636, lon:127.0286},
+      {name:"청주", lat:36.6424, lon:127.4890},
+      {name:"전주", lat:35.8242, lon:127.1480},
+      {name:"춘천", lat:37.8813, lon:127.7298},
+      {name:"강릉", lat:37.7519, lon:128.8761}
     ];
-
-    const DEFAULT_DATA = {
-      title: '우리 반 이름 입력',
-      theme: 'blue',
-      dark: false,
-      big: true,
-      timetable: {
-        mon: ['국어', '사회', '수학', '-', '-', '-'],
-        tue: ['체육', '-', '-', '-', '-', '-'],
-        wed: ['국어', '사회', '-', '-', '-', '-'],
-        thu: ['-', '-', '-', '-', '-', '-'],
-        fri: ['-', '-', '-', '-', '-', '-']
+    const DEFAULT = {
+      title:"용기 뿜뿜 통합교육1반",
+      theme:"orange",
+      dark:false,
+      big:false,
+      book:"빙글빙글",
+      location:{name:"이천", lat:37.2723, lon:127.4350},
+      school:{name:"도암초등학교", office:"J10", code:"7530074"},
+      timetable:{
+        mon:["국어","수학","통합","미술","창체","정리"],
+        tue:["수학","국어","체육","통합","음악","독서"],
+        wed:["통합","수학","국어","영어","미술","창체"],
+        thu:["국어","통합","수학","체육","안전","정리"],
+        fri:["음악","국어","통합","수학","동아리","정리"]
       },
-      tasks: [
-        { text: '알림장 부모님 확인받기!', done: false },
-        { text: '맛있는 거 먹기', done: true },
-        { text: '연수 잘 끝내기', done: false }
-      ],
-      meal: {
-        schoolName: '한내초등학교',
-        eduCode: 'J10',
-        schoolCode: '7530074',
-        mealCode: '2'
-      },
-      weather: {
-        name: '경기도 이천시',
-        lat: 37.2723,
-        lon: 127.4350
-      }
+      tasks:[{text:"아침 인사 나누기",done:false},{text:"알림장 쓰기",done:false},{text:"책상 주변 정리",done:false}]
     };
+    let data = load();
+    let lastSlot = "";
 
-    const $ = (id) => document.getElementById(id);
-    let data = loadData();
-    let lastSlotKey = '';
+    const $ = id => document.getElementById(id);
+    function load(){ try { return merge(DEFAULT, JSON.parse(localStorage.getItem(STORAGE)) || {}); } catch { return structuredClone(DEFAULT); } }
+    function merge(a,b){ const out = structuredClone(a); for(const k in b){ out[k] = b[k] && typeof b[k] === "object" && !Array.isArray(b[k]) ? merge(out[k] || {}, b[k]) : b[k]; } return out; }
+    function save(){ localStorage.setItem(STORAGE, JSON.stringify(data)); }
+    function applyScale(){ document.documentElement.style.setProperty("--scale", Math.min(window.innerWidth / DESIGN_W, window.innerHeight / DESIGN_H)); }
+    function applyTheme(){ document.body.dataset.theme = data.theme; document.body.dataset.dark = String(data.dark); document.documentElement.style.fontSize = data.big ? "18px" : "16px"; document.querySelectorAll(".dot").forEach(d => d.classList.toggle("active", d.dataset.theme === data.theme)); }
 
-    init();
-
-    function init() {
-      ensureDataShape();
-      applySettings();
-      $('classTitle').value = data.title === '우리 반 이름 입력' ? '' : data.title;
-      renderSchedule();
-      renderTasks();
-      renderFlow();
-      renderTime();
-      bindEvents();
-      setInterval(() => {
-        renderTime();
-        syncCurrentHighlights();
-      }, 1000);
-      refreshWeatherAndAir();
-      refreshMeal();
+    function init(){
+      applyScale(); window.addEventListener("resize", applyScale);
+      $("titleInput").value = data.title; $("bookInput").value = data.book;
+      applyTheme(); renderTimetable(); renderFlow(); renderTasks();
+      bind(); tick(); setInterval(tick, 1000);
+      fetchWeatherAndAir(); fetchMeal();
+    }
+    function bind(){
+      $("titleInput").addEventListener("input", e => { data.title=e.target.value; save(); });
+      $("bookInput").addEventListener("input", e => { data.book=e.target.value; save(); });
+      document.querySelectorAll(".dot").forEach(btn => btn.addEventListener("click", () => { data.theme=btn.dataset.theme; save(); applyTheme(); }));
+      $("darkBtn").addEventListener("click", () => { data.dark=!data.dark; save(); applyTheme(); });
+      $("bigBtn").addEventListener("click", () => { data.big=!data.big; save(); applyTheme(); });
+      $("saveBtn").addEventListener("click", saveJpg);
+      $("addTaskBtn").addEventListener("click", addTask);
+      $("regionBtn").addEventListener("click", openRegionModal);
+      $("regionOk").addEventListener("click", applyRegionFromModal);
+      document.querySelectorAll("[data-close-modal]").forEach(b => b.addEventListener("click", closeRegionModal));
+      $("schoolBtn").addEventListener("click", changeSchool);
     }
 
-    function ensureDataShape() {
-      data = deepMerge(structuredClone(DEFAULT_DATA), data || {});
-      DAYS.forEach(day => {
-        if (!Array.isArray(data.timetable[day.key])) data.timetable[day.key] = ['-', '-', '-', '-', '-', '-'];
-        while (data.timetable[day.key].length < 6) data.timetable[day.key].push('-');
-      });
-      if (!data.weather || typeof data.weather.lat !== 'number' || typeof data.weather.lon !== 'number') {
-        data.weather = structuredClone(DEFAULT_DATA.weather);
+    function renderTimetable(){
+      const root = $("timetable");
+      root.innerHTML = `<div class="trow"><div></div>${DAYS.map(d=>`<div class="thead">${d[1]}</div>`).join("")}</div>`;
+      for(let p=1;p<=6;p++){
+        const row = document.createElement("div"); row.className = "trow";
+        row.innerHTML = `<div class="period">${p}교시</div>` + DAYS.map(([key]) => `<input class="subjectInput" data-day="${key}" data-p="${p}" value="${esc(data.timetable[key][p-1])}" aria-label="${key} ${p}교시">`).join("");
+        root.appendChild(row);
       }
-      saveData();
+      root.querySelectorAll(".subjectInput").forEach(input => input.addEventListener("input", e => {
+        data.timetable[e.target.dataset.day][Number(e.target.dataset.p)-1] = e.target.value; save(); renderFlowOnly(); updateNowCard(); highlightNowCell();
+      }));
+      highlightNowCell();
     }
-
-    function loadData() {
-      try {
-        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-        return deepMerge(structuredClone(DEFAULT_DATA), saved || {});
-      } catch (e) {
-        return structuredClone(DEFAULT_DATA);
+    function renderFlow(){ renderFlowOnly(); updateNowCard(); }
+    function renderFlowOnly(){
+      const day = todayKey();
+      $("weekdayText").textContent = koreanWeekday();
+      $("flowList").innerHTML = SLOTS.map(slot => {
+        const cur = isCurrent(slot);
+        const label = slot.type === "period" ? `${slot.p}교시` : slot.label;
+        const sub = slot.type === "period" ? (data.timetable[day]?.[slot.p-1] || "과목 없음") : slot.sub;
+        return `<div class="flowItem ${cur ? "current" : ""}"><div class="flowTime">${slot.s}-${slot.e}</div><div class="flowName">${label} · ${esc(sub)}</div></div>`;
+      }).join("");
+    }
+    function updateNowCard(){
+      const slot = currentSlot(); const day = todayKey();
+      if(!slot){ $("nowTitle").textContent = "수업 전후"; $("nowSub").textContent = "다음 활동을 준비해요"; return; }
+      if(slot.type === "period"){ $("nowTitle").textContent = `${slot.p}교시`; $("nowSub").textContent = data.timetable[day]?.[slot.p-1] || "과목 없음"; }
+      else { $("nowTitle").textContent = slot.label; $("nowSub").textContent = slot.sub; }
+    }
+    function highlightNowCell(){
+      document.querySelectorAll(".subjectInput.now").forEach(el => el.classList.remove("now"));
+      const slot = currentSlot();
+      if(slot?.type === "period"){
+        const el = document.querySelector(`.subjectInput[data-day="${todayKey()}"][data-p="${slot.p}"]`);
+        if(el) el.classList.add("now");
       }
     }
-
-    function deepMerge(base, incoming) {
-      for (const key in incoming) {
-        const val = incoming[key];
-        if (val && typeof val === 'object' && !Array.isArray(val) && base[key]) {
-          base[key] = deepMerge(base[key], val);
-        } else {
-          base[key] = val;
-        }
-      }
-      return base;
+    function tick(){
+      const now = seoulParts();
+      $("dateText").textContent = `${now.year}년 ${now.month}월 ${now.day}일 ${now.week}`;
+      $("timeText").textContent = `${now.hour}:${now.minute}`;
+      const slot = currentSlot(); const key = slot ? `${slot.s}-${slot.e}` : "none";
+      if(key !== lastSlot){ lastSlot = key; renderFlow(); highlightNowCell(); }
     }
 
-    function saveData() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-    }
-
-    function applySettings() {
-      document.body.dataset.theme = data.theme;
-      document.body.dataset.dark = data.dark ? 'true' : 'false';
-      document.body.dataset.big = data.big ? 'true' : 'false';
-      document.querySelectorAll('[data-theme-btn]').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.themeBtn === data.theme);
-      });
-      $('darkToggle').textContent = data.dark ? '☀️' : '🌙';
-      $('bigToggle').textContent = data.big ? '🔠' : '🔎';
-    }
-
-    function bindEvents() {
-      $('classTitle').addEventListener('input', (e) => {
-        data.title = e.currentTarget.value.trim();
-        saveData();
-      });
-
-      $('classTitle').addEventListener('blur', (e) => {
-        if (!e.currentTarget.value.trim()) {
-          data.title = '우리 반 이름 입력';
-          saveData();
-        }
-      });
-
-      document.querySelectorAll('[data-theme-btn]').forEach(btn => {
-        btn.addEventListener('click', () => {
-          data.theme = btn.dataset.themeBtn;
-          applySettings();
-          saveData();
-        });
-      });
-
-      $('darkToggle').addEventListener('click', () => {
-        data.dark = !data.dark;
-        applySettings();
-        saveData();
-      });
-
-      $('bigToggle').addEventListener('click', () => {
-        data.big = !data.big;
-        applySettings();
-        saveData();
-      });
-
-      $('addTask').addEventListener('click', addTask);
-      $('resetDone').addEventListener('click', () => {
-        data.tasks = data.tasks.map(t => ({ ...t, done: false }));
-        saveData();
-        renderTasks();
-      });
-
-      $('saveJpg').addEventListener('click', saveAsJpg);
-      $('weatherLocationBtn').addEventListener('click', changeWeatherRegion);
-      $('refreshWeatherAir').addEventListener('click', refreshWeatherAndAir);
-      $('refreshMeal').addEventListener('click', refreshMeal);
-      $('mealSettings').addEventListener('click', changeSchoolForMeal);
-    }
-
-    function renderSchedule() {
-      const currentDay = getTodayKey();
-      const currentSlot = getCurrentSlot();
-      let html = '<thead><tr><th class="corner"></th>';
-      html += DAYS.map(day => `<th class="day">${day.label}</th>`).join('');
-      html += '</tr></thead><tbody>';
-      for (let p = 1; p <= 6; p++) {
-        html += `<tr><th>${p}교시</th>`;
-        for (const day of DAYS) {
-          const isNow = currentSlot && currentSlot.type === 'period' && currentSlot.period === p && currentDay === day.key;
-          const value = escapeHtml(data.timetable[day.key][p - 1] || '-');
-          html += `<td class="${isNow ? 'now' : ''}" contenteditable="true" spellcheck="false" data-day="${day.key}" data-period="${p}">${value}</td>`;
-        }
-        html += '</tr>';
-      }
-      html += '</tbody>';
-      $('scheduleTable').innerHTML = html;
-
-      $('scheduleTable').querySelectorAll('td').forEach(cell => {
-        cell.addEventListener('focus', (e) => {
-          if (e.currentTarget.textContent.trim() === '-') e.currentTarget.textContent = '';
-        });
-
-        cell.addEventListener('input', (e) => {
-          const day = e.currentTarget.dataset.day;
-          const period = Number(e.currentTarget.dataset.period) - 1;
-          data.timetable[day][period] = e.currentTarget.textContent.trim() || '-';
-          saveData();
-          renderFlow();
-        });
-
-        cell.addEventListener('blur', (e) => {
-          const day = e.currentTarget.dataset.day;
-          const period = Number(e.currentTarget.dataset.period) - 1;
-          const value = e.currentTarget.textContent.trim() || '-';
-          data.timetable[day][period] = value;
-          e.currentTarget.textContent = value;
-          saveData();
-          renderFlow();
-        });
-
-        cell.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            e.currentTarget.blur();
-          }
-        });
+    function renderTasks(){
+      const list = $("taskList");
+      list.innerHTML = data.tasks.slice(0,5).map((t,i)=>`<div class="task ${t.done ? "done" : ""}" data-i="${i}"><button class="check">✓</button><input class="taskInput" value="${esc(t.text)}"><button class="trash">×</button></div>`).join("");
+      if(!data.tasks.length) list.innerHTML = `<div class="mealEmpty">할 일을 추가해 주세요</div>`;
+      list.querySelectorAll(".task").forEach(el => {
+        const i = Number(el.dataset.i);
+        el.querySelector(".check").addEventListener("click", () => { data.tasks[i].done = !data.tasks[i].done; save(); renderTasks(); });
+        el.querySelector(".trash").addEventListener("click", () => { data.tasks.splice(i,1); save(); renderTasks(); });
+        el.querySelector(".taskInput").addEventListener("input", e => { data.tasks[i].text = e.target.value; save(); });
       });
     }
+    function addTask(){ if(data.tasks.length >= 5){ alert("한 화면에 잘 보이도록 할 일은 최대 5개까지 표시합니다."); return; } data.tasks.push({text:"새 할 일", done:false}); save(); renderTasks(); }
 
-    function renderFlow() {
-      const currentDay = getTodayKey();
-      $('flowList').innerHTML = SLOTS.map(slot => {
-        const current = isCurrentSlot(slot);
-        const label = getSlotLabel(slot, currentDay);
-        return `
-          <div class="flow-item ${current ? 'current' : ''}">
-            <div class="flow-time">${slot.start} ~ ${slot.end}</div>
-            <div class="flow-name">${escapeHtml(label)}</div>
-          </div>
-        `;
-      }).join('');
-    }
-
-    function renderTasks() {
-      const list = $('taskList');
-      if (!data.tasks.length) {
-        list.innerHTML = '<div class="empty-state">할 일을 추가해 주세요 ✏️</div>';
+    function openRegionModal(){ $("regionInput").value = data.location.name || ""; $("regionModal").classList.add("show"); setTimeout(()=>$("regionInput").focus(), 50); }
+    function closeRegionModal(){ $("regionModal").classList.remove("show"); }
+    async function applyRegionFromModal(){
+      const q = $("regionInput").value.trim(); if(!q) return;
+      closeRegionModal();
+      if(q.replace(/\s/g,"") === "현재위치"){
+        if(!navigator.geolocation){ alert("이 브라우저는 현재 위치를 지원하지 않아요. 지역명을 직접 입력해 주세요."); return; }
+        navigator.geolocation.getCurrentPosition(pos => {
+          data.location = {name:"현재위치", lat:pos.coords.latitude, lon:pos.coords.longitude}; save(); fetchWeatherAndAir();
+        }, () => alert("현재 위치 권한이 필요해요."), {timeout:8000, maximumAge:600000});
         return;
       }
-      list.innerHTML = data.tasks.slice(0, 7).map((task, index) => `
-        <div class="task ${task.done ? 'done' : ''}" data-index="${index}">
-          <button class="check" type="button" aria-label="완료">✓</button>
-          <div class="task-text" contenteditable="true" spellcheck="false">${escapeHtml(task.text)}</div>
-          <button class="delete" type="button" aria-label="삭제">×</button>
-        </div>
-      `).join('');
-
-      list.querySelectorAll('.task').forEach(taskEl => {
-        const i = Number(taskEl.dataset.index);
-        taskEl.querySelector('.check').addEventListener('click', () => {
-          data.tasks[i].done = !data.tasks[i].done;
-          saveData();
-          renderTasks();
-        });
-        taskEl.querySelector('.delete').addEventListener('click', () => {
-          data.tasks.splice(i, 1);
-          saveData();
-          renderTasks();
-        });
-        taskEl.querySelector('.task-text').addEventListener('input', (e) => {
-          data.tasks[i].text = e.currentTarget.textContent.trim();
-          saveData();
-        });
-        taskEl.querySelector('.task-text').addEventListener('keydown', (e) => {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            e.currentTarget.blur();
-          }
-        });
-      });
+      const region = REGIONS.find(r => norm(r.name).includes(norm(q)) || norm(q).includes(norm(r.name)));
+      if(!region){ alert("등록된 주요 지역을 찾지 못했어요. 예: 이천, 서울, 부산, 제주"); return; }
+      data.location = structuredClone(region); save(); fetchWeatherAndAir();
     }
+    function updateRegionButton(){ $("regionBtn").textContent = `📍 ${data.location.name || "지역"}`; }
 
-    function addTask() {
-      if (data.tasks.length >= 7) {
-        alert('한 화면에 예쁘게 보이도록 할 일은 최대 7개까지 보여줄게요.');
-        return;
+    async function fetchWeatherAndAir(){
+      updateRegionButton();
+      $("weatherText").textContent = "날씨 조회 중"; $("pm10Grade").textContent = "미세먼지 조회 중"; $("pm25Grade").textContent = "초미세먼지 조회 중";
+      try{
+        const url = new URL("https://api.open-meteo.com/v1/forecast");
+        url.searchParams.set("latitude", data.location.lat); url.searchParams.set("longitude", data.location.lon);
+        url.searchParams.set("current", "temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m");
+        url.searchParams.set("timezone", "Asia/Seoul");
+        const res = await fetch(url); const json = await res.json(); const cur = json.current || {};
+        const wc = weatherCode(cur.weather_code);
+        $("weatherEmoji").textContent = wc.emoji; $("tempText").textContent = hasValue(cur.temperature_2m) ? `${Math.round(cur.temperature_2m)}℃` : "--℃";
+        $("weatherText").textContent = wc.text; $("humidityText").textContent = hasValue(cur.relative_humidity_2m) ? `${Math.round(cur.relative_humidity_2m)}%` : "--%";
+        $("windText").textContent = hasValue(cur.wind_speed_10m) ? `바람 ${Number(cur.wind_speed_10m).toFixed(1)}km/h` : "바람 --";
+      }catch{
+        $("weatherEmoji").textContent = "🌤️"; $("tempText").textContent = "--℃"; $("weatherText").textContent = "날씨 조회 실패"; $("humidityText").textContent = "--%"; $("windText").textContent = "바람 --";
       }
-      data.tasks.push({ text: '새 할 일 입력', done: false });
-      saveData();
-      renderTasks();
+      try{
+        const aurl = new URL("https://air-quality-api.open-meteo.com/v1/air-quality");
+        aurl.searchParams.set("latitude", data.location.lat); aurl.searchParams.set("longitude", data.location.lon);
+        aurl.searchParams.set("hourly", "pm10,pm2_5"); aurl.searchParams.set("timezone", "Asia/Seoul"); aurl.searchParams.set("past_days","1"); aurl.searchParams.set("forecast_days","1");
+        const ar = await fetch(aurl); const a = await ar.json(); const idx = bestAirIndex(a.hourly?.time || []);
+        const pm10 = Math.round(a.hourly?.pm10?.[idx] ?? 0), pm25 = Math.round(a.hourly?.pm2_5?.[idx] ?? 0);
+        $("pm10Text").textContent = pm10 || "--"; $("pm10Grade").textContent = `미세먼지 ${gradePM10(pm10)}`;
+        $("pm25Text").textContent = pm25 || "--"; $("pm25Grade").textContent = `초미세먼지 ${gradePM25(pm25)}`;
+      }catch{
+        $("pm10Text").textContent = "--"; $("pm10Grade").textContent = "미세먼지 조회 실패"; $("pm25Text").textContent = "--"; $("pm25Grade").textContent = "초미세먼지 조회 실패";
+      }
     }
-
-    function renderTime() {
-      const now = getSeoulNow();
-      $('dateLine').textContent = `${now.month}월 ${now.day}일 (${now.weekday})`;
-      $('timeLine').textContent = `${now.hour}:${now.minute}`;
+    function weatherCode(code){
+      const c = Number(code);
+      if([0,1].includes(c)) return {emoji:"☀️", text:"맑음"};
+      if([2,3].includes(c)) return {emoji:"⛅", text:"구름 많음"};
+      if([45,48].includes(c)) return {emoji:"🌫️", text:"안개"};
+      if([51,53,55,61,63,65,80,81,82].includes(c)) return {emoji:"🌧️", text:"비"};
+      if([71,73,75,77,85,86].includes(c)) return {emoji:"❄️", text:"눈"};
+      if([95,96,99].includes(c)) return {emoji:"⛈️", text:"천둥번개"};
+      return {emoji:"🌤️", text:"날씨"};
     }
+    function bestAirIndex(times){ const nowHour = new Date().toLocaleString("sv-SE", {timeZone:"Asia/Seoul"}).replace(" ","T").slice(0,13); const found = times.findIndex(t => String(t).slice(0,13) === nowHour); return found >= 0 ? found : Math.max(0, times.length - 1); }
+    function gradePM10(v){ if(!v) return "확인 중"; if(v<=30) return "좋음"; if(v<=80) return "보통"; if(v<=150) return "나쁨"; return "매우 나쁨"; }
+    function gradePM25(v){ if(!v) return "확인 중"; if(v<=15) return "좋음"; if(v<=35) return "보통"; if(v<=75) return "나쁨"; return "매우 나쁨"; }
 
-    function getSeoulNow() {
-      const parts = new Intl.DateTimeFormat('ko-KR', {
-        timeZone: 'Asia/Seoul',
-        month: 'numeric',
-        day: 'numeric',
-        weekday: 'short',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: false
-      }).formatToParts(new Date());
-      const map = Object.fromEntries(parts.map(p => [p.type, p.value]));
-      return {
-        month: Number(map.month),
-        day: Number(map.day),
-        weekday: map.weekday.replace('요일', ''),
-        hour: map.hour === '24' ? '00' : map.hour,
-        minute: map.minute,
-        second: map.second
-      };
+    async function fetchMeal(){
+      const ymd = new Date().toLocaleDateString("sv-SE", {timeZone:"Asia/Seoul"}).replaceAll("-","");
+      const box = $("mealList"); box.innerHTML = `<div class="mealEmpty">급식 정보를 불러오는 중</div>`;
+      try{
+        const url = `https://open.neis.go.kr/hub/mealServiceDietInfo?Type=json&ATPT_OFCDC_SC_CODE=${encodeURIComponent(data.school.office)}&SD_SCHUL_CODE=${encodeURIComponent(data.school.code)}&MLSV_YMD=${ymd}`;
+        const res = await fetch(url); const json = await res.json(); const rows = json.mealServiceDietInfo?.[1]?.row || [];
+        const dish = rows[0]?.DDISH_NM || "";
+        const menus = dish.replace(/<br\s*\/?>/gi, "\n").split("\n").map(cleanMenu).filter(Boolean).slice(0, 10);
+        box.innerHTML = menus.length ? menus.map(m => `<div class="mealChip">${esc(m)}</div>`).join("") : `<div class="mealEmpty">오늘 등록된 급식이 없어요</div>`;
+      }catch{ box.innerHTML = `<div class="mealEmpty">급식 조회가 어려워요. 학교 설정을 확인해 주세요.</div>`; }
     }
-
-    function getSeoulYmd() {
-      const parts = new Intl.DateTimeFormat('ko-KR', {
-        timeZone: 'Asia/Seoul',
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit'
-      }).formatToParts(new Date());
-      const map = Object.fromEntries(parts.map(p => [p.type, p.value]));
-      return `${map.year}${map.month}${map.day}`;
-    }
-
-    function getTodayKey() {
-      const day = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Seoul', weekday: 'short' }).format(new Date()).toLowerCase();
-      const map = { mon: 'mon', tue: 'tue', wed: 'wed', thu: 'thu', fri: 'fri' };
-      return map[day] || 'mon';
-    }
-
-    function getCurrentSlot() {
-      const now = getSeoulNow();
-      const minute = Number(now.hour) * 60 + Number(now.minute);
-      return SLOTS.find(slot => minute >= toMinutes(slot.start) && minute < toMinutes(slot.end)) || null;
-    }
-
-    function syncCurrentHighlights() {
-      const current = getCurrentSlot();
-      const slotKey = current ? `${current.start}-${current.end}` : 'none';
-      if (slotKey !== lastSlotKey) {
-        lastSlotKey = slotKey;
-        renderSchedule();
-        renderFlow();
+    function cleanMenu(s){ return s.replace(/\([^)]*\)/g,"").replace(/[0-9.]/g,"").replace(/\s+/g," ").trim(); }
+    async function changeSchool(){
+      const q = prompt("학교명을 입력하세요. 예: 도암초등학교", data.school.name || "");
+      if(!q) return;
+      try{
+        const url = `https://open.neis.go.kr/hub/schoolInfo?Type=json&SCHUL_NM=${encodeURIComponent(q.trim())}`;
+        const res = await fetch(url); const json = await res.json(); const row = json.schoolInfo?.[1]?.row?.[0];
+        if(!row) throw new Error("no school");
+        data.school = {name:row.SCHUL_NM, office:row.ATPT_OFCDC_SC_CODE, code:row.SD_SCHUL_CODE}; save(); fetchMeal();
+        alert(`${row.SCHUL_NM} 급식으로 설정했어요.`);
+      }catch{
+        const manual = prompt("학교 검색이 어려워요. 교육청코드,학교코드 형식으로 입력할 수 있어요. 예: J10,7530074");
+        if(!manual) return; const [office, code] = manual.split(",").map(x => x.trim());
+        if(office && code){ data.school = {name:q.trim(), office, code}; save(); fetchMeal(); }
       }
     }
 
-    function isCurrentSlot(slot) {
-      const current = getCurrentSlot();
-      return !!current && current.start === slot.start && current.end === slot.end;
+    function seoulParts(){
+      const parts = new Intl.DateTimeFormat("ko-KR",{timeZone:"Asia/Seoul",year:"numeric",month:"numeric",day:"numeric",weekday:"short",hour:"2-digit",minute:"2-digit",hour12:false}).formatToParts(new Date());
+      const m = Object.fromEntries(parts.map(p=>[p.type,p.value]));
+      return {year:m.year, month:m.month, day:m.day, week:m.weekday, hour:m.hour==="24" ? "00" : m.hour, minute:m.minute};
     }
+    function koreanWeekday(){ return new Intl.DateTimeFormat("ko-KR",{timeZone:"Asia/Seoul",weekday:"long"}).format(new Date()); }
+    function todayKey(){ const k = new Intl.DateTimeFormat("en-US",{timeZone:"Asia/Seoul",weekday:"short"}).format(new Date()).toLowerCase(); return {mon:"mon",tue:"tue",wed:"wed",thu:"thu",fri:"fri"}[k] || "mon"; }
+    function currentSlot(){ const n=nowMin(); return SLOTS.find(x => n >= min(x.s) && n < min(x.e)); }
+    function nowMin(){ const p=seoulParts(); return Number(p.hour)*60 + Number(p.minute); }
+    function min(t){ const [h,m]=t.split(":").map(Number); return h*60+m; }
+    function isCurrent(slot){ const c=currentSlot(); return c && c.s===slot.s && c.e===slot.e; }
+    function hasValue(v){ return v !== undefined && v !== null && v !== "" && String(v) !== "undefined"; }
+    function norm(s){ return String(s || "").toLowerCase().replace(/\s/g,""); }
+    function esc(s){ return String(s ?? "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;"); }
 
-    function getSlotLabel(slot, dayKey) {
-      if (slot.type === 'period') {
-        const subject = data.timetable[dayKey]?.[slot.period - 1] || '-';
-        return `${slot.period}교시${subject && subject !== '-' ? ' · ' + subject : ''}`;
-      }
-      return slot.label;
-    }
-
-    function toMinutes(text) {
-      const [h, m] = text.split(':').map(Number);
-      return h * 60 + m;
-    }
-
-    async function refreshWeatherAndAir() {
-      const place = data.weather || DEFAULT_DATA.weather;
-      $('weatherLocationBtn').textContent = `📍 ${place.name || '지역 선택'}`;
-      setWeatherLoading();
-      await Promise.all([
-        fetchWeather(place.lat, place.lon),
-        fetchAirQuality(place.lat, place.lon)
-      ]);
-    }
-
-    function setWeatherLoading() {
-      $('weatherEmoji').textContent = '📡';
-      $('weatherTemp').textContent = '-°';
-      $('weatherDesc').textContent = '날씨 확인 중';
-      $('weatherDetail').textContent = '미세먼지도 함께 불러오는 중';
-      $('pm10Value').textContent = '-';
-      $('pm25Value').textContent = '-';
-      $('pm10Badge').textContent = '📡 확인';
-      $('pm25Badge').textContent = '📡 확인';
-    }
-
-    async function fetchWeather(lat, lon) {
-      try {
-        const url = new URL('https://api.open-meteo.com/v1/forecast');
-        url.searchParams.set('latitude', Number(lat).toFixed(4));
-        url.searchParams.set('longitude', Number(lon).toFixed(4));
-        url.searchParams.set('current', 'temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,is_day');
-        url.searchParams.set('timezone', 'auto');
-        url.searchParams.set('forecast_days', '1');
-        const res = await fetch(url.toString());
-        if (!res.ok) throw new Error('weather api failed');
-        const json = await res.json();
-        const current = json.current || {};
-        const codeInfo = weatherCodeInfo(current.weather_code, current.is_day);
-        const temp = Math.round(current.temperature_2m ?? 0);
-        const apparent = Math.round(current.apparent_temperature ?? temp);
-        const humidity = Math.round(current.relative_humidity_2m ?? 0);
-        const wind = Math.round(current.wind_speed_10m ?? 0);
-        const rain = Number(current.precipitation ?? 0);
-        $('weatherEmoji').textContent = codeInfo.emoji;
-        $('weatherTemp').textContent = `${temp}°`;
-        $('weatherDesc').textContent = codeInfo.label;
-        $('weatherDetail').textContent = `체감 ${apparent}° · 습도 ${humidity}% · 바람 ${wind}km/h${rain > 0 ? ` · 강수 ${rain}mm` : ''}`;
-      } catch (e) {
-        $('weatherEmoji').textContent = '🌤️';
-        $('weatherTemp').textContent = '-°';
-        $('weatherDesc').textContent = '날씨 불러오기 실패';
-        $('weatherDetail').textContent = '지역을 다시 선택해 주세요';
-      }
-    }
-
-    async function fetchAirQuality(lat, lon) {
-      try {
-        const url = new URL('https://air-quality-api.open-meteo.com/v1/air-quality');
-        url.searchParams.set('latitude', Number(lat).toFixed(4));
-        url.searchParams.set('longitude', Number(lon).toFixed(4));
-        url.searchParams.set('hourly', 'pm10,pm2_5');
-        url.searchParams.set('timezone', 'auto');
-        url.searchParams.set('past_days', '1');
-        url.searchParams.set('forecast_days', '1');
-        const res = await fetch(url.toString());
-        if (!res.ok) throw new Error('air api failed');
-        const json = await res.json();
-        const pm10Arr = json.hourly?.pm10 || [];
-        const pm25Arr = json.hourly?.pm2_5 || [];
-        const timeArr = json.hourly?.time || [];
-        const nowIso = new Date().toLocaleString('sv-SE', { timeZone: json.timezone || 'Asia/Seoul' }).replace(' ', 'T').slice(0,13);
-        let idx = timeArr.findIndex(t => t.slice(0,13) === nowIso);
-        if (idx < 0) idx = Math.max(0, pm10Arr.length - 1);
-        updateAirBox('pm10', Math.round(pm10Arr[idx] ?? 0));
-        updateAirBox('pm25', Math.round(pm25Arr[idx] ?? 0));
-      } catch (e) {
-        $('pm10Value').textContent = '-';
-        $('pm25Value').textContent = '-';
-        $('pm10Badge').textContent = '📡 실패';
-        $('pm25Badge').textContent = '📡 실패';
-      }
-    }
-
-    async function changeWeatherRegion() {
-      const input = prompt('날씨와 미세먼지를 볼 지역명을 입력하세요.\n예: 이천, 서울, 부산, 제주\n현재 위치를 쓰려면 \"현재위치\"라고 입력하세요.', data.weather?.name || '이천');
-      if (!input) return;
-      const query = input.trim();
-
-      if (/현재\s*위치|내\s*위치/.test(query)) {
-        useCurrentLocationForWeather();
-        return;
-      }
-
-      const local = findLocalKoreanPlace(query);
-      if (local) {
-        setWeatherPlace(local.name, local.lat, local.lon);
-        return;
-      }
-
-      try {
-        const matches = await searchPlaceByOpenMeteo(query);
-        if (!matches.length) {
-          alert('지역을 찾지 못했어요. 예: 이천, 서울, 부산처럼 입력해 주세요.');
-          return;
-        }
-
-        let selected = matches[0];
-        if (matches.length > 1) {
-          const list = matches.slice(0, 8).map((p, i) => `${i + 1}. ${formatPlaceName(p)}`).join('\n');
-          const pick = prompt(`검색된 지역 중 번호를 입력하세요.\n\n${list}`, '1');
-          if (!pick) return;
-          selected = matches[Number(pick) - 1];
-          if (!selected) {
-            alert('선택 번호를 다시 확인해 주세요.');
-            return;
-          }
-        }
-        setWeatherPlace(formatPlaceName(selected), selected.latitude, selected.longitude);
-      } catch (e) {
-        alert('지역 검색이 잠시 어렵습니다. 다시 시도해 주세요.');
-      }
-    }
-
-    function useCurrentLocationForWeather() {
-      if (!navigator.geolocation) {
-        alert('이 브라우저에서는 현재 위치를 사용할 수 없어요. 지역명을 직접 입력해 주세요.');
-        return;
-      }
-      navigator.geolocation.getCurrentPosition(
-        pos => setWeatherPlace('현재 위치', pos.coords.latitude, pos.coords.longitude),
-        () => alert('현재 위치 권한이 허용되지 않았어요. 지역명을 직접 입력해 주세요.'),
-        { enableHighAccuracy: false, timeout: 6500, maximumAge: 600000 }
-      );
-    }
-
-    function setWeatherPlace(name, lat, lon) {
-      data.weather = { name, lat: Number(lat), lon: Number(lon) };
-      saveData();
-      refreshWeatherAndAir();
-    }
-
-    function findLocalKoreanPlace(query) {
-      const normalized = query.replace(/\s/g, '').toLowerCase();
-      return KOREA_LOCATIONS.find(place => place.key.some(key => normalized.includes(key.replace(/\s/g, '').toLowerCase())));
-    }
-
-    async function searchPlaceByOpenMeteo(query) {
-      const url = new URL('https://geocoding-api.open-meteo.com/v1/search');
-      url.searchParams.set('name', query);
-      url.searchParams.set('count', '10');
-      url.searchParams.set('language', 'ko');
-      url.searchParams.set('format', 'json');
-      const res = await fetch(url.toString());
-      if (!res.ok) throw new Error('geocoding failed');
-      const json = await res.json();
-      const results = json.results || [];
-      const korea = results.filter(item => item.country_code === 'KR');
-      return korea.length ? korea : results;
-    }
-
-    function formatPlaceName(place) {
-      return [place.name, place.admin1, place.country]
-        .filter(Boolean)
-        .filter((value, index, arr) => arr.indexOf(value) === index)
-        .join(' · ');
-    }
-
-    function weatherCodeInfo(code, isDay = 1) {
-      const day = Number(isDay) !== 0;
-      const map = {
-        0: day ? ['☀️', '맑음'] : ['🌙', '맑음'],
-        1: day ? ['🌤️', '대체로 맑음'] : ['🌙', '대체로 맑음'],
-        2: ['⛅', '구름 조금'],
-        3: ['☁️', '흐림'],
-        45: ['🌫️', '안개'],
-        48: ['🌫️', '서리 안개'],
-        51: ['🌦️', '이슬비'],
-        53: ['🌦️', '이슬비'],
-        55: ['🌦️', '강한 이슬비'],
-        56: ['🌧️', '어는 이슬비'],
-        57: ['🌧️', '강한 어는 이슬비'],
-        61: ['🌧️', '약한 비'],
-        63: ['🌧️', '비'],
-        65: ['🌧️', '강한 비'],
-        66: ['🌧️', '어는 비'],
-        67: ['🌧️', '강한 어는 비'],
-        71: ['🌨️', '약한 눈'],
-        73: ['🌨️', '눈'],
-        75: ['❄️', '강한 눈'],
-        77: ['❄️', '싸락눈'],
-        80: ['🌦️', '소나기'],
-        81: ['🌦️', '소나기'],
-        82: ['⛈️', '강한 소나기'],
-        85: ['🌨️', '눈 소나기'],
-        86: ['🌨️', '강한 눈 소나기'],
-        95: ['⛈️', '천둥번개'],
-        96: ['⛈️', '우박 동반 천둥'],
-        99: ['⛈️', '강한 우박 천둥']
-      };
-      const item = map[Number(code)] || ['🌤️', '날씨 확인'];
-      return { emoji: item[0], label: item[1] };
-    }
-
-    function updateAirBox(type, value) {
-      const valueEl = $(type === 'pm10' ? 'pm10Value' : 'pm25Value');
-      const badgeEl = $(type === 'pm10' ? 'pm10Badge' : 'pm25Badge');
-      valueEl.textContent = value;
-      const info = type === 'pm10' ? gradePm10(value) : gradePm25(value);
-      badgeEl.textContent = `${info.emoji} ${info.label}`;
-      badgeEl.style.background = info.bg;
-      badgeEl.style.color = info.color;
-    }
-
-    function gradePm10(v) {
-      if (v <= 30) return { label: '좋음', emoji: '😄', bg: '#daf1dd', color: '#1f7e31' };
-      if (v <= 80) return { label: '보통', emoji: '🙂', bg: '#e7f3d2', color: '#4f7d1e' };
-      if (v <= 150) return { label: '나쁨', emoji: '😷', bg: '#ffe7c5', color: '#a85a00' };
-      return { label: '매우나쁨', emoji: '😵', bg: '#ffd6d6', color: '#b53535' };
-    }
-
-    function gradePm25(v) {
-      if (v <= 15) return { label: '좋음', emoji: '😄', bg: '#daf1dd', color: '#1f7e31' };
-      if (v <= 35) return { label: '보통', emoji: '🙂', bg: '#e7f3d2', color: '#4f7d1e' };
-      if (v <= 75) return { label: '나쁨', emoji: '😷', bg: '#ffe7c5', color: '#a85a00' };
-      return { label: '매우나쁨', emoji: '😵', bg: '#ffd6d6', color: '#b53535' };
-    }
-
-    async function refreshMeal() {
-      const ymd = getSeoulYmd();
-      const pretty = `${ymd.slice(0,4)}.${ymd.slice(4,6)}.${ymd.slice(6,8)}`;
-      $('mealMeta').textContent = `${pretty} · ${data.meal.schoolName || '학교'} 점심`;
-      $('mealMenu').innerHTML = '<div class="meal-empty">급식 정보를 불러오는 중이에요.</div>';
-
-      try {
-        const url = new URL('https://open.neis.go.kr/hub/mealServiceDietInfo');
-        url.searchParams.set('Type', 'json');
-        url.searchParams.set('ATPT_OFCDC_SC_CODE', data.meal.eduCode);
-        url.searchParams.set('SD_SCHUL_CODE', data.meal.schoolCode);
-        url.searchParams.set('MLSV_YMD', ymd);
-
-        const res = await fetch(url.toString());
-        if (!res.ok) throw new Error('meal api failed');
-        const json = await res.json();
-        const rows = json.mealServiceDietInfo?.[1]?.row || [];
-        const row = rows.find(item => item.MMEAL_SC_CODE === data.meal.mealCode) || rows[0];
-
-        if (!row || !row.DDISH_NM) {
-          showMealEmpty('오늘 등록된 급식 정보가 없어요.');
-          return;
-        }
-
-        const menuItems = cleanMealText(row.DDISH_NM);
-        if (!menuItems.length) {
-          showMealEmpty('오늘 등록된 급식 정보가 없어요.');
-          return;
-        }
-
-        $('mealMenu').innerHTML = menuItems.slice(0, 12).map(item => `<div class="meal-chip">${escapeHtml(item)}</div>`).join('');
-      } catch (e) {
-        showMealEmpty('급식 정보를 불러오지 못했어요.<br>학교 설정을 확인해 주세요.');
-      }
-    }
-
-    function cleanMealText(raw) {
-      const normalized = decodeEntities(String(raw))
-        .replace(/<br\s*\/?>/gi, '\n')
-        .replace(/<\/?[^>]+>/g, '\n');
-
-      return normalized
-        .split(/\n+/)
-        .map(item => item
-          .replace(/\([^)]*\d[^)]*\)/g, '')
-          .replace(/\[[^\]]*\]/g, '')
-          .replace(/\s+/g, ' ')
-          .replace(/[★☆]/g, '')
-          .trim()
-        )
-        .filter(Boolean);
-    }
-
-    function decodeEntities(text) {
-      const area = document.createElement('textarea');
-      area.innerHTML = text;
-      return area.value;
-    }
-
-    function showMealEmpty(message) {
-      $('mealMenu').innerHTML = `<div class="meal-empty">${message}</div>`;
-    }
-
-    async function changeSchoolForMeal() {
-      const name = prompt('학교명을 입력하세요. 예: 한내초등학교', data.meal.schoolName || '');
-      if (!name) return;
-
-      try {
-        const url = new URL('https://open.neis.go.kr/hub/schoolInfo');
-        url.searchParams.set('Type', 'json');
-        url.searchParams.set('SCHUL_NM', name.trim());
-
-        const res = await fetch(url.toString());
-        if (!res.ok) throw new Error('school search failed');
-        const json = await res.json();
-        const rows = json.schoolInfo?.[1]?.row || [];
-
-        if (!rows.length) {
-          manualSchoolSetting(name.trim());
-          return;
-        }
-
-        const list = rows.slice(0, 10).map((school, i) => {
-          const region = school.LCTN_SC_NM || school.ATPT_OFCDC_SC_NM || '';
-          return `${i + 1}. ${school.SCHUL_NM} / ${region} / ${school.SD_SCHUL_CODE}`;
-        }).join('\n');
-
-        const pickText = prompt(`검색된 학교 중 번호를 입력하세요.\n\n${list}`, '1');
-        if (!pickText) return;
-        const index = Number(pickText) - 1;
-        const selected = rows[index];
-        if (!selected) {
-          alert('선택 번호를 다시 확인해 주세요.');
-          return;
-        }
-
-        data.meal.schoolName = selected.SCHUL_NM;
-        data.meal.eduCode = selected.ATPT_OFCDC_SC_CODE;
-        data.meal.schoolCode = selected.SD_SCHUL_CODE;
-        saveData();
-        refreshMeal();
-      } catch (e) {
-        manualSchoolSetting(name.trim());
-      }
-    }
-
-    function manualSchoolSetting(defaultName) {
-      alert('학교 자동 검색이 어려워요. 교육청 코드와 학교 코드를 직접 입력할게요.');
-      const eduCode = prompt('교육청 코드 ATPT_OFCDC_SC_CODE를 입력하세요. 예: 경기 J10', data.meal.eduCode || 'J10');
-      if (!eduCode) return;
-      const schoolCode = prompt('학교 코드 SD_SCHUL_CODE를 입력하세요.', data.meal.schoolCode || '');
-      if (!schoolCode) return;
-      data.meal.schoolName = defaultName || data.meal.schoolName || '우리 학교';
-      data.meal.eduCode = eduCode.trim().toUpperCase();
-      data.meal.schoolCode = schoolCode.trim();
-      saveData();
-      refreshMeal();
-    }
-
-    async function saveAsJpg() {
-      const target = $('captureArea');
-      document.body.classList.add('capture-mode');
-      try {
-        const dataUrl = await domToJpeg(target, 0.98);
-        const link = document.createElement('a');
-        const date = new Date().toISOString().slice(0,10);
-        link.href = dataUrl;
-        link.download = `우리반_스마트보드_${date}.jpg`;
-        link.click();
-      } catch (e) {
-        alert('JPG 저장에 실패했어요. 다시 한 번 눌러 주세요.');
-      } finally {
-        document.body.classList.remove('capture-mode');
-      }
-    }
-
-    function domToJpeg(node, quality = 0.95) {
-      return new Promise((resolve, reject) => {
-        const width = node.offsetWidth;
-        const height = node.offsetHeight;
-        const cloned = node.cloneNode(true);
-        cloned.querySelectorAll('input').forEach(input => {
-          input.setAttribute('value', input.value || input.getAttribute('placeholder') || '');
-        });
-
-        const wrapper = document.createElement('div');
-        wrapper.style.position = 'fixed';
-        wrapper.style.left = '-100000px';
-        wrapper.style.top = '0';
-        wrapper.style.width = width + 'px';
-        wrapper.style.height = height + 'px';
-        wrapper.appendChild(cloned);
-        document.body.appendChild(wrapper);
-
-        const styles = Array.from(document.styleSheets).map(sheet => {
-          try {
-            return Array.from(sheet.cssRules).map(rule => rule.cssText).join('\n');
-          } catch (_) {
-            return '';
-          }
-        }).join('\n');
-
-        const svg = `
-          <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
-            <foreignObject width="100%" height="100%">
-              <div xmlns="http://www.w3.org/1999/xhtml">
-                <style>${styles}</style>
-                ${new XMLSerializer().serializeToString(cloned)}
-              </div>
-            </foreignObject>
-          </svg>`;
-
+    async function saveJpg(){
+      document.body.classList.add("capture");
+      await new Promise(r => setTimeout(r, 60));
+      try{
+        document.querySelectorAll("input").forEach(i => i.setAttribute("value", i.value));
+        const board = $("board");
+        const clone = board.cloneNode(true);
+        clone.style.transform = "none"; clone.style.position = "static"; clone.style.left = "0"; clone.style.top = "0";
+        const css = Array.from(document.styleSheets).map(s => { try { return Array.from(s.cssRules).map(r=>r.cssText).join("\n"); } catch { return ""; } }).join("\n");
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${DESIGN_W}" height="${DESIGN_H}"><foreignObject width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml"><style>${css}</style>${new XMLSerializer().serializeToString(clone)}</div></foreignObject></svg>`;
         const img = new Image();
         img.onload = () => {
-          const canvas = document.createElement('canvas');
-          canvas.width = width * 2;
-          canvas.height = height * 2;
-          const ctx = canvas.getContext('2d');
-          ctx.scale(2, 2);
-          ctx.fillStyle = getComputedStyle(document.body).backgroundColor || '#ffffff';
-          ctx.fillRect(0, 0, width, height);
-          ctx.drawImage(img, 0, 0);
-          try {
-            const url = canvas.toDataURL('image/jpeg', quality);
-            wrapper.remove();
-            resolve(url);
-          } catch (err) {
-            wrapper.remove();
-            reject(err);
-          }
+          const canvas = document.createElement("canvas"); canvas.width = DESIGN_W * 2; canvas.height = DESIGN_H * 2;
+          const ctx = canvas.getContext("2d"); ctx.scale(2,2); ctx.fillStyle = getComputedStyle(document.body).backgroundColor; ctx.fillRect(0,0,DESIGN_W,DESIGN_H); ctx.drawImage(img,0,0);
+          const a = document.createElement("a"); a.href = canvas.toDataURL("image/jpeg", .95); a.download = `우리반_스마트전광판_${new Date().toISOString().slice(0,10)}.jpg`; a.click();
         };
-        img.onerror = (err) => {
-          wrapper.remove();
-          reject(err);
-        };
-        img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
-      });
+        img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+      }catch{ alert("JPG 저장이 어려워요. 브라우저 화면 캡처를 사용해 주세요."); }
+      finally{ setTimeout(()=>document.body.classList.remove("capture"), 200); }
     }
-
-    function escapeHtml(text) {
-      return String(text)
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;');
-    }
+    init();
   </script>
 </body>
 </html>
