@@ -1,0 +1,2376 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>우리 반 맞춤형 스마트 전광판</title>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    :root {
+      --w: 1600px;
+      --h: 900px;
+      --bg: #f5efe5;
+      --card: rgba(255,255,255,.84);
+      --card2: #fff8e9;
+      --soft: #f4eadb;
+      --text: #233036;
+      --muted: #69737d;
+      --line: rgba(35,48,54,.10);
+      --shadow: 0 12px 34px rgba(56, 45, 32, .14);
+      --accent: #6aaef4;
+      --accent2: #d8edff;
+      --accentText: #246ab1;
+      --orange: #ffd28d;
+      --green: #bfe8d4;
+      --danger: #ffd5d5;
+    }
+    body[data-theme="pink"] { --accent:#ff76a8; --accent2:#ffe1ec; --accentText:#c83d79; }
+    body[data-theme="green"] { --accent:#56bf8c; --accent2:#dbf5e9; --accentText:#1f8055; }
+    body[data-theme="blue"] { --accent:#5aa9f3; --accent2:#dceeff; --accentText:#246ab1; }
+    body[data-theme="orange"] { --accent:#ff9f43; --accent2:#ffecd2; --accentText:#b9630d; }
+    body[data-dark="true"] {
+      --bg:#17202a; --card:rgba(37,45,58,.92); --card2:#273344; --soft:#1f2937;
+      --text:#f3f7fb; --muted:#b8c3cf; --line:rgba(255,255,255,.12); --shadow:0 18px 44px rgba(0,0,0,.34);
+      --orange:#594424; --green:#1f4b3b; --danger:#503030;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { width:100%; height:100%; margin:0; overflow:hidden; }
+    body {
+      font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Apple SD Gothic Neo","Noto Sans KR",Arial,sans-serif;
+      color:var(--text);
+      background:radial-gradient(circle at 8% 12%, rgba(255,255,255,.55), transparent 28%), var(--bg);
+    }
+    input, button { font:inherit; color:inherit; }
+    button { -webkit-tap-highlight-color: transparent; }
+
+    .viewport { position:fixed; inset:0; overflow:hidden; background:var(--bg); }
+    .board {
+      position:absolute; left:50%; top:50%;
+      width:var(--w); height:var(--h);
+      transform:translate(-50%, -50%) scale(var(--scale, 1));
+      transform-origin:center center;
+      padding:18px;
+      display:grid;
+      grid-template-rows:84px 1fr;
+      gap:14px;
+    }
+    .card {
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius:26px;
+      box-shadow:var(--shadow);
+      overflow:hidden;
+    }
+    .topbar {
+      display:grid;
+      grid-template-columns:1fr auto;
+      gap:14px;
+      align-items:center;
+      padding:10px 12px 10px 24px;
+    }
+    .titleInput {
+      width:100%; min-width:0;
+      border:0; outline:0; background:transparent;
+      font-size:48px; line-height:1; font-weight:950; letter-spacing:-.055em;
+      color:var(--text);
+      padding:6px 8px;
+      border-radius:18px;
+    }
+    .titleInput::placeholder { color:rgba(105,115,125,.72); }
+    .titleInput:focus { background:rgba(255,255,255,.45); box-shadow:0 0 0 4px var(--accent2) inset; }
+    body[data-dark="true"] .titleInput:focus { background:rgba(255,255,255,.07); }
+    .toolbar { display:flex; gap:10px; align-items:center; }
+    .pillbox { display:flex; align-items:center; gap:9px; padding:8px 10px; background:rgba(255,255,255,.66); border-radius:999px; box-shadow:0 8px 20px rgba(0,0,0,.07); }
+    body[data-dark="true"] .pillbox { background:rgba(255,255,255,.08); }
+    .dot { width:34px; height:34px; border-radius:50%; border:3px solid rgba(255,255,255,.9); cursor:pointer; box-shadow:0 3px 8px rgba(0,0,0,.16); }
+    .dot.pink{background:#ff76a8}.dot.green{background:#56bf8c}.dot.blue{background:#5aa9f3}.dot.orange{background:#ff9f43}
+    .dot.active { outline:4px solid rgba(35,48,54,.18); }
+    .toolbtn { border:0; background:rgba(255,255,255,.74); min-width:44px; height:44px; border-radius:16px; cursor:pointer; font-size:22px; font-weight:950; display:grid; place-items:center; }
+    body[data-dark="true"] .toolbtn { background:rgba(255,255,255,.08); }
+    .printBtn { min-width:50px; gap:1px; font-size:18px; line-height:1; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+    .printBtn .printLabel { font-size:10px; line-height:1; font-weight:950; letter-spacing:-.03em; opacity:.76; margin-top:1px; }
+    .activityBtn { min-width:50px; gap:1px; font-size:18px; line-height:1; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+    .activityBtn .activityLabel { font-size:10px; line-height:1; font-weight:950; letter-spacing:-.03em; opacity:.76; margin-top:1px; }
+
+    .main {
+      min-height:0;
+      display:grid;
+      grid-template-columns:610px 494px 1fr;
+      gap:14px;
+    }
+    .left, .center, .right { min-height:0; display:grid; gap:14px; }
+    .left { grid-template-rows:296px 62px 62px 1fr; }
+    .center { grid-template-rows:532px 1fr; }
+    .right { grid-template-rows:150px 166px 1fr; }
+    .bottom { display:grid; grid-template-columns:235px 1fr; gap:14px; min-height:0; }
+
+    .card-inner { height:100%; padding:18px; display:flex; flex-direction:column; min-height:0; }
+    .head { height:36px; flex:0 0 auto; display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:10px; }
+    .h { font-size:28px; line-height:1; font-weight:950; letter-spacing:-.035em; white-space:nowrap; }
+    .sub { font-size:16px; color:var(--muted); font-weight:850; white-space:nowrap; }
+    .miniBtn { border:0; background:var(--accent2); color:var(--accentText); font-size:17px; font-weight:950; height:34px; padding:0 13px; border-radius:999px; cursor:pointer; }
+    .headActions { display:flex; align-items:center; justify-content:flex-end; gap:8px; min-width:0; }
+    .dropZone {
+      border:3px dashed var(--accent);
+      background:linear-gradient(135deg, rgba(255,255,255,.72), var(--accent2));
+      border-radius:22px;
+      min-height:116px;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+      padding:16px;
+      cursor:pointer;
+      transition:.15s ease;
+    }
+    .dropZone.dragover { transform:scale(1.012); filter:brightness(1.04); box-shadow:0 0 0 5px rgba(255,255,255,.75) inset; }
+    .dropIcon { font-size:34px; line-height:1; }
+    .dropTitle { margin-top:7px; font-size:23px; font-weight:950; letter-spacing:-.04em; }
+    .dropHelp { margin-top:5px; color:var(--muted); font-size:15px; font-weight:850; line-height:1.35; }
+    .pasteBox { width:100%; height:88px; resize:none; border:1px solid var(--line); background:rgba(255,255,255,.70); border-radius:18px; padding:12px 14px; outline:0; font-size:16px; font-weight:800; color:var(--text); margin-top:12px; }
+    body[data-dark="true"] .pasteBox { background:rgba(255,255,255,.08); }
+    .importPreview { margin-top:12px; max-height:210px; overflow:auto; border-radius:18px; border:1px solid var(--line); background:rgba(255,255,255,.38); }
+    .importPreview table { width:100%; border-collapse:separate; border-spacing:5px; table-layout:fixed; }
+    .importPreview th, .importPreview td { border-radius:10px; background:var(--card2); text-align:center; padding:8px 5px; font-size:16px; font-weight:900; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .importPreview th { background:var(--soft); color:var(--muted); }
+    .importNotice { margin-top:8px; color:var(--muted); font-size:14px; font-weight:850; line-height:1.35; }
+
+
+    .bookCard { background:linear-gradient(135deg, rgba(255,255,255,.88), var(--accent2)); }
+    .bookBox { height:100%; padding:10px 18px; display:grid; grid-template-columns:auto 1fr; align-items:center; gap:14px; }
+    .bookLabel { font-size:23px; line-height:1; font-weight:950; letter-spacing:-.04em; white-space:nowrap; display:flex; align-items:center; gap:6px; }
+    .labelInput { width:190px; min-width:0; border:0; outline:0; background:transparent; color:var(--text); font-size:23px; line-height:1; font-weight:950; letter-spacing:-.04em; padding:4px 4px; border-radius:12px; }
+    .labelInput:focus { background:rgba(255,255,255,.62); box-shadow:0 0 0 3px var(--accent2) inset; }
+    body[data-dark="true"] .labelInput:focus { background:rgba(255,255,255,.08); }
+    .bookInput { width:100%; min-width:0; height:40px; border:0; outline:0; background:rgba(255,255,255,.62); border-radius:18px; padding:0 16px; color:var(--accentText); font-size:25px; font-weight:950; letter-spacing:-.045em; }
+    .bookInput::placeholder { color:rgba(105,115,125,.75); }
+    .bookInput:focus { background:#fff; box-shadow:0 0 0 4px rgba(255,255,255,.75), 0 0 0 7px var(--accent2); }
+    body[data-dark="true"] .bookCard { background:linear-gradient(135deg, rgba(37,45,58,.92), var(--soft)); }
+    body[data-dark="true"] .bookInput { background:rgba(255,255,255,.08); color:var(--text); }
+    .wordCard { background:linear-gradient(135deg, rgba(255,255,255,.88), #eaf6df); }
+    body[data-dark="true"] .wordCard { background:linear-gradient(135deg, rgba(37,45,58,.92), var(--soft)); }
+
+    .timetable { flex:1; min-height:0; display:grid; grid-template-rows:38px repeat(6, 1fr); gap:7px; }
+    .trow { display:grid; grid-template-columns:70px repeat(5, 1fr); gap:7px; min-height:0; }
+    .tcell, .thead, .period {
+      border-radius:16px; display:flex; align-items:center; justify-content:center; min-width:0; overflow:hidden;
+      font-weight:950;
+    }
+    .thead { background:var(--soft); color:var(--muted); font-size:20px; }
+    .period { color:var(--accentText); background:var(--accent2); font-size:19px; }
+    .subjectInput {
+      width:100%; height:100%; min-width:0;
+      border:1px solid var(--line); outline:0; border-radius:16px;
+      background:#fff8e7; text-align:center;
+      font-size:21px; font-weight:950; letter-spacing:-.03em;
+      padding:0 5px;
+    }
+    body[data-dark="true"] .subjectInput { background:rgba(255,255,255,.06); }
+    .subjectInput:focus { background:#fff; box-shadow:0 0 0 4px var(--accent2) inset; }
+    body[data-dark="true"] .subjectInput:focus { background:rgba(255,255,255,.10); }
+    .subjectInput.now { background:var(--accent); color:white; border-color:transparent; box-shadow:0 9px 20px rgba(0,0,0,.14); }
+    .thead.today {
+      background:linear-gradient(135deg, var(--accent2), rgba(255,255,255,.92));
+      color:var(--accentText);
+      box-shadow:0 0 0 3px var(--accent) inset;
+      position:relative;
+    }
+    .thead.today::after {
+      content:'오늘';
+      position:absolute; right:7px; top:4px;
+      font-size:10px; line-height:1; font-weight:950;
+      color:#fff; background:var(--accent);
+      border-radius:999px; padding:3px 5px;
+    }
+    .subjectInput.today:not(.now) {
+      background:linear-gradient(180deg, #fff9ea, var(--accent2));
+      border-color:rgba(255,159,67,.45);
+      box-shadow:0 0 0 2px rgba(255,255,255,.55) inset;
+    }
+
+    .clockCard .card-inner { justify-content:center; align-items:center; text-align:center; padding:10px; }
+    .clockDisplay { width:100%; height:100%; min-height:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:7px; }
+    .date { color:var(--muted); font-size:21px; font-weight:950; letter-spacing:-.02em; white-space:nowrap; }
+    .time { color:var(--accent); font-size:58px; line-height:.9; font-weight:950; letter-spacing:-.07em; white-space:nowrap; }
+    .analogClock {
+      position:relative; width:112px; height:112px; flex:0 0 112px; border-radius:50%;
+      background:radial-gradient(circle at 50% 50%, #fff 0 8%, var(--card2) 9% 68%, rgba(255,255,255,.82) 69% 100%);
+      border:5px solid rgba(35,48,54,.12); box-shadow:inset 0 0 0 3px rgba(255,255,255,.65), 0 8px 18px rgba(0,0,0,.08);
+    }
+    body[data-dark="true"] .analogClock { background:radial-gradient(circle at 50% 50%, rgba(255,255,255,.18) 0 8%, var(--card2) 9% 100%); border-color:rgba(255,255,255,.14); }
+    .analogClock::before { content:""; position:absolute; inset:9px; border-radius:50%; border:2px dashed rgba(105,115,125,.22); }
+    .clockNum {
+      position:absolute;
+      left:50%;
+      top:50%;
+      width:24px;
+      margin-left:-12px;
+      margin-top:-7px;
+      text-align:center;
+      color:var(--muted);
+      font-size:13px;
+      font-weight:950;
+      line-height:1;
+      z-index:2;
+      pointer-events:none;
+      transform:rotate(var(--deg)) translateY(-43px) rotate(calc(-1 * var(--deg)));
+      transform-origin:center center;
+    }
+    .clockNum.n12 { --deg:0deg; }
+    .clockNum.n1 { --deg:30deg; }
+    .clockNum.n2 { --deg:60deg; }
+    .clockNum.n3 { --deg:90deg; }
+    .clockNum.n4 { --deg:120deg; }
+    .clockNum.n5 { --deg:150deg; }
+    .clockNum.n6 { --deg:180deg; }
+    .clockNum.n7 { --deg:210deg; }
+    .clockNum.n8 { --deg:240deg; }
+    .clockNum.n9 { --deg:270deg; }
+    .clockNum.n10 { --deg:300deg; }
+    .clockNum.n11 { --deg:330deg; }
+    .hand { position:absolute; left:50%; top:50%; transform-origin:50% 100%; transform:translate(-50%, -100%) rotate(0deg); border-radius:999px; box-shadow:0 1px 2px rgba(0,0,0,.18); }
+    .hourHand { width:7px; height:31px; background:var(--text); }
+    .minuteHand { width:5px; height:43px; background:var(--accent); }
+    .centerPin { position:absolute; left:50%; top:50%; width:13px; height:13px; border-radius:50%; background:var(--accent); border:3px solid #fff; transform:translate(-50%,-50%); box-shadow:0 2px 5px rgba(0,0,0,.2); }
+
+    .weatherGrid { flex:1; min-height:0; display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:8px; }
+    .weatherBox { background:var(--card2); border:1px solid var(--line); border-radius:20px; padding:8px 10px; display:flex; flex-direction:column; justify-content:center; text-align:center; min-height:0; overflow:hidden; }
+    .emoji { font-size:30px; line-height:1; flex:0 0 auto; }
+    .weatherMain { font-size:25px; line-height:1; font-weight:950; letter-spacing:-.04em; margin-top:5px; white-space:nowrap; overflow:visible; text-overflow:clip; }
+    .weatherSmall { font-size:13px; color:var(--muted); font-weight:850; margin-top:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .regionBtn { border:0; background:transparent; color:var(--accentText); font-size:18px; font-weight:950; cursor:pointer; padding:4px 0; }
+
+    .flowList { flex:1; min-height:0; display:grid; grid-template-rows:repeat(var(--slot-count, 12), 1fr); gap:4px; }
+    .flowItem { min-height:0; border:1px solid var(--line); background:var(--card2); border-radius:15px; display:grid; grid-template-columns:132px 1fr auto; align-items:center; gap:8px; padding:4px 9px; overflow:hidden; }
+    .flowItem.current { background:linear-gradient(135deg, var(--accent), var(--accentText)); color:#fff; border-color:transparent; box-shadow:0 8px 18px rgba(0,0,0,.16), 0 0 0 3px rgba(255,255,255,.75) inset; }
+    .flowTime { color:var(--muted); font-size:18px; line-height:1; font-weight:950; white-space:nowrap; letter-spacing:-.02em; }
+    .flowContent { min-width:0; overflow:hidden; display:flex; align-items:center; gap:7px; }
+    .flowName { min-width:0; flex:0 1 auto; font-size:22px; line-height:1; font-weight:950; letter-spacing:-.04em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .flowDetail { min-width:0; flex:1 1 auto; color:var(--muted); font-size:17px; line-height:1; font-weight:950; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .flowDetail::before { content:': '; }
+    .nowBadge { display:none !important; padding:5px 9px; border-radius:999px; background:rgba(255,255,255,.94); color:var(--accentText); font-size:14px; font-weight:950; white-space:nowrap; }
+    .flowItem.current .flowTime, .flowItem.current .flowDetail { color:rgba(255,255,255,.90); }
+    .flowItem.current .nowBadge { display:none !important; }
+
+    .mealList { flex:1; min-height:0; display:flex; flex-wrap:wrap; gap:8px; align-content:flex-start; overflow:hidden; }
+    .mealChip { border:0; cursor:pointer; background:var(--accent2); color:var(--accentText); border-radius:999px; padding:8px 12px; font-size:17px; line-height:1; font-weight:950; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .mealChip:hover { filter:brightness(1.04); transform:translateY(-1px); }
+    .mealChip.selected { background:var(--orange); color:var(--text); box-shadow:0 0 0 3px rgba(255,255,255,.8) inset; }
+    .bestMealBox { flex:0 0 auto; margin-top:8px; border-radius:18px; background:linear-gradient(90deg, var(--green), #ffe08a); color:#12222c; padding:10px 13px; display:flex; align-items:center; gap:9px; min-height:43px; overflow:hidden; }
+    .bestMealTitle { font-size:16px; font-weight:950; white-space:nowrap; }
+    .bestMealText { min-width:0; font-size:20px; font-weight:950; letter-spacing:-.04em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .mealEmpty { color:var(--muted); font-size:20px; font-weight:900; padding-top:10px; }
+
+    .timerBox { height:100%; background:linear-gradient(135deg, var(--orange), #ffe5af); border-radius:26px; padding:15px 18px; display:grid; grid-template-columns:1fr auto; grid-template-rows:auto 1fr auto; gap:8px 12px; overflow:hidden; position:relative; }
+    body[data-dark="true"] .timerBox { background:linear-gradient(135deg, #4d3820, #5a452c); }
+    .timerHeader { min-width:0; overflow:hidden; }
+    .timerTitle { font-size:27px; line-height:1; font-weight:950; letter-spacing:-.04em; white-space:nowrap; }
+    .timerDisplay { align-self:center; font-size:62px; line-height:.9; font-weight:950; letter-spacing:-.07em; color:var(--accentText); white-space:nowrap; }
+    .timerControls { grid-column:2; grid-row:1 / span 2; display:grid; grid-template-columns:1fr 1fr; gap:7px; align-content:center; justify-items:stretch; min-width:150px; }
+    .timerSet { grid-column:1 / span 2; height:34px; border-radius:999px; background:rgba(255,255,255,.62); display:flex; align-items:center; justify-content:center; gap:6px; color:rgba(35,48,54,.76); font-size:15px; font-weight:950; }
+    body[data-dark="true"] .timerSet { background:rgba(255,255,255,.10); color:#eadfcf; }
+    .timerInput { width:48px; height:26px; border:0; outline:0; border-radius:10px; background:rgba(255,255,255,.88); text-align:center; font-size:17px; font-weight:950; padding:0 4px; }
+    body[data-dark="true"] .timerInput { background:rgba(255,255,255,.14); }
+    .timerBtn { border:0; height:34px; border-radius:999px; padding:0 11px; background:rgba(255,255,255,.86); color:var(--accentText); font-size:15px; font-weight:950; cursor:pointer; }
+    .timerBtn.stop { color:#9b3e2b; }
+    .timerBtn.attention { grid-column:1 / span 2; background:linear-gradient(90deg, var(--accent), var(--accentText)); color:#fff; }
+    .timerTrack { grid-column:1 / -1; height:18px; border-radius:999px; background:rgba(255,255,255,.48); overflow:hidden; box-shadow:inset 0 0 0 1px rgba(35,48,54,.08); }
+    body[data-dark="true"] .timerTrack { background:rgba(255,255,255,.10); }
+    .timerFill { width:100%; height:100%; border-radius:999px; background:linear-gradient(90deg, var(--green), var(--accent), #ffd86b); transition:width .35s linear; }
+    .timerBox.timerRunning .timerFill { box-shadow:0 0 16px rgba(255,255,255,.65); }
+    .timerBox.timerAlarm { animation:timerAlarm .9s ease-in-out 3; }
+    @keyframes timerAlarm { 0%,100%{filter:brightness(1)} 50%{filter:brightness(1.23); transform:scale(1.012)} }
+    .fullscreenOverlay { position:fixed; inset:0; display:none; align-items:center; justify-content:center; z-index:60; background:linear-gradient(135deg, rgba(255,244,218,.98), rgba(216,237,255,.98)); color:var(--text); padding:42px; text-align:center; }
+    body[data-dark="true"] .fullscreenOverlay { background:linear-gradient(135deg, rgba(23,32,42,.98), rgba(39,51,68,.98)); color:var(--text); }
+    .fullscreenOverlay.show { display:flex; animation:fullscreenFade .18s ease; }
+    @keyframes fullscreenFade { from{opacity:0; transform:scale(.985)} to{opacity:1; transform:scale(1)} }
+    .homeViewBtn { position:absolute; left:34px; top:28px; border:0; border-radius:999px; padding:16px 24px; background:rgba(35,48,54,.94); color:#fff; font-size:24px; font-weight:950; cursor:pointer; box-shadow:0 12px 26px rgba(0,0,0,.18); }
+    .homeViewBtn:active { transform:scale(.97); }
+    .attentionContent { display:grid; gap:24px; justify-items:center; align-items:center; }
+    .attentionEyesWrap {
+      position:relative;
+      display:flex; align-items:center; justify-content:center; gap:min(7vw, 88px);
+      padding:min(4vw, 34px) min(7vw, 72px);
+      min-width:min(58vw, 620px);
+      min-height:min(24vw, 250px);
+    }
+    .attentionEye {
+      width:min(16vw, 154px); height:min(16vw, 154px);
+      border-radius:50%; background:#fff;
+      border:8px solid rgba(255,159,67,.95);
+      position:relative;
+      box-shadow:0 16px 34px rgba(0,0,0,.12), inset 0 -12px 0 rgba(216,237,255,.72);
+    }
+    .attentionEye::before {
+      content:'';
+      position:absolute; inset:16px;
+      border-radius:50%;
+      border:6px solid rgba(35,48,54,.78);
+    }
+    .attentionEye span {
+      position:absolute; left:50%; top:52%;
+      width:min(6.2vw, 58px); height:min(6.2vw, 58px);
+      transform:translate(-50%, -50%);
+      border-radius:50%; background:#233036;
+      box-shadow:inset -10px -10px 0 rgba(0,0,0,.17);
+    }
+    .attentionEye span::after {
+      content:''; position:absolute; left:13px; top:11px;
+      width:16px; height:16px; border-radius:50%; background:#fff;
+    }
+    .sparkle {
+      position:absolute; font-size:min(4.2vw, 44px); line-height:1; user-select:none;
+      filter:drop-shadow(0 6px 10px rgba(255,190,88,.25));
+      animation:sparkleTwinkle 1.6s ease-in-out infinite;
+    }
+    .sparkle.s1 { left:10%; top:16%; animation-delay:0s; }
+    .sparkle.s2 { right:12%; top:12%; animation-delay:.35s; }
+    .sparkle.s3 { left:16%; bottom:18%; animation-delay:.7s; }
+    .sparkle.s4 { right:16%; bottom:14%; animation-delay:1.05s; }
+    @keyframes sparkleTwinkle {
+      0%,100% { transform:scale(.82) rotate(0deg); opacity:.5; }
+      50% { transform:scale(1.15) rotate(8deg); opacity:1; }
+    }
+    .attentionText { font-size:min(8vw, 112px); line-height:1; font-weight:950; letter-spacing:-.07em; text-shadow:0 6px 0 rgba(255,255,255,.65); }
+    body[data-dark="true"] .attentionText { text-shadow:none; }
+    .timerFocusCard { width:min(88vw, 1040px); min-height:min(66vh, 620px); border-radius:44px; background:rgba(255,255,255,.76); box-shadow:0 30px 80px rgba(0,0,0,.18); padding:52px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:28px; border:1px solid var(--line); }
+    body[data-dark="true"] .timerFocusCard { background:rgba(37,45,58,.92); }
+    .focusTimerTitle { font-size:min(5.4vw, 76px); line-height:1; font-weight:950; letter-spacing:-.06em; }
+    .focusTimerDisplay { font-size:min(18vw, 230px); line-height:.85; font-weight:950; letter-spacing:-.09em; color:var(--accentText); font-variant-numeric:tabular-nums; }
+    .focusTimerTrack { width:100%; height:42px; border-radius:999px; background:rgba(35,48,54,.10); overflow:hidden; box-shadow:inset 0 0 0 1px rgba(35,48,54,.08); }
+    .focusTimerFill { height:100%; width:100%; border-radius:999px; background:linear-gradient(90deg, var(--green), var(--accent), #ffd86b); transition:width .35s linear; }
+    .focusTimerSub { font-size:min(3.2vw, 40px); font-weight:950; color:var(--muted); letter-spacing:-.04em; }
+    .timerFocusOverlay.finished .timerFocusCard { animation:timerAlarm .9s ease-in-out 3; }
+
+    .addTask { margin-top:auto; height:38px; border:0; border-radius:18px; background:linear-gradient(90deg, var(--green), #ffd96c); color:#12222c; font-size:18px; font-weight:950; cursor:pointer; }
+
+    .pointCard { height:100%; padding:15px 16px; display:grid; grid-template-columns:1fr auto; align-items:center; gap:12px; background:linear-gradient(135deg, rgba(255,255,255,.88), var(--accent2)); }
+    body[data-dark="true"] .pointCard { background:linear-gradient(135deg, rgba(37,45,58,.94), var(--soft)); }
+    .pointInfo { min-width:0; overflow:hidden; }
+    .pointLabel { font-size:24px; line-height:1; font-weight:950; letter-spacing:-.04em; white-space:nowrap; }
+    .pointScoreWrap { display:flex; align-items:flex-end; gap:5px; margin-top:7px; color:var(--accentText); }
+    .pointScore { font-size:58px; line-height:.86; font-weight:950; letter-spacing:-.07em; display:inline-block; min-width:92px; }
+    .pointUnit { font-size:25px; line-height:1; font-weight:950; padding-bottom:4px; }
+    .pointControls { display:grid; grid-template-columns:58px 58px; grid-template-rows:58px 32px; gap:7px; align-items:center; justify-content:end; }
+    .faceBtn { border:0; width:58px; height:58px; border-radius:20px; background:rgba(255,255,255,.75); font-size:34px; cursor:pointer; box-shadow:0 8px 18px rgba(0,0,0,.08); display:grid; place-items:center; }
+    .faceBtn:active { transform:scale(.94); }
+    .goodFace { background:#e5faed; }
+    .warnFace { background:#fff0d8; }
+    body[data-dark="true"] .faceBtn { background:rgba(255,255,255,.09); }
+    .pointSet { grid-column:1 / span 2; border:0; height:32px; border-radius:999px; background:rgba(255,255,255,.72); color:var(--accentText); font-size:15px; font-weight:950; cursor:pointer; }
+    body[data-dark="true"] .pointSet { background:rgba(255,255,255,.08); color:var(--text); }
+    .pointScore.good { animation:scoreGood .72s ease; }
+    .pointScore.down { animation:scoreDown .72s ease; }
+    .pointCard.goodGlow { animation:cardGood .72s ease; }
+    .pointCard.warnGlow { animation:cardWarn .72s ease; }
+    @keyframes scoreGood { 0%{transform:scale(1)} 35%{transform:scale(1.24); color:#1f9e5f; text-shadow:0 0 18px rgba(80,220,140,.85)} 100%{transform:scale(1)} }
+    @keyframes scoreDown { 0%{transform:translateX(0) scale(1)} 20%{transform:translateX(-4px) scale(1.08); color:#d64a4a} 40%{transform:translateX(4px) scale(1.08)} 60%{transform:translateX(-3px) scale(1.05)} 100%{transform:translateX(0) scale(1)} }
+    @keyframes cardGood { 0%,100%{filter:brightness(1)} 45%{filter:brightness(1.18)} }
+    @keyframes cardWarn { 0%,100%{filter:brightness(1)} 45%{filter:brightness(.9)} }
+
+    .taskList { flex:1; min-height:0; display:grid; grid-auto-rows:minmax(54px, auto); gap:8px; align-content:start; overflow:hidden; }
+    .task { background:var(--card2); border:1px solid var(--line); border-radius:18px; min-height:54px; display:grid; grid-template-columns:36px 1fr 34px; gap:8px; align-items:center; padding:7px 9px; }
+    .check { width:30px; height:30px; border:3px solid #a8a8a8; border-radius:6px; background:white; color:transparent; cursor:pointer; display:grid; place-items:center; font-size:22px; font-weight:950; }
+    body[data-dark="true"] .check { background:rgba(255,255,255,.08); }
+    .task.done .check { background:#696bf0; border-color:#696bf0; color:white; }
+    .taskInput { width:100%; min-width:0; border:0; outline:0; background:transparent; font-size:22px; font-weight:950; letter-spacing:-.04em; }
+    .task.done .taskInput { color:#9aa1a9; text-decoration:line-through; text-decoration-thickness:3px; }
+    .trash { border:0; width:30px; height:30px; border-radius:12px; background:rgba(255,255,255,.65); cursor:pointer; font-size:16px; }
+    body[data-dark="true"] .trash { background:rgba(255,255,255,.08); }
+
+    .modalBackdrop { position:fixed; inset:0; background:rgba(0,0,0,.30); display:none; align-items:center; justify-content:center; z-index:20; }
+    .modalBackdrop.show { display:flex; }
+    .modal { width:min(540px, calc(100vw - 36px)); background:var(--card); border:1px solid var(--line); border-radius:28px; box-shadow:0 22px 60px rgba(0,0,0,.24); padding:22px; color:var(--text); }
+    .modal.wide { width:min(760px, calc(100vw - 36px)); }
+    .modal h2 { margin:0 0 10px; font-size:28px; letter-spacing:-.04em; }
+    .modal p { margin:0 0 14px; color:var(--muted); font-weight:800; line-height:1.45; }
+    .modal input { width:100%; height:54px; border:1px solid var(--line); background:rgba(255,255,255,.70); border-radius:18px; padding:0 16px; outline:0; font-size:23px; font-weight:900; }
+    body[data-dark="true"] .modal input { background:rgba(255,255,255,.08); }
+    .modalActions { display:flex; justify-content:flex-end; gap:10px; margin-top:14px; }
+    .modalActions button { border:0; border-radius:16px; height:45px; padding:0 18px; font-weight:950; cursor:pointer; }
+    .cancel { background:var(--soft); }
+    .ok { background:var(--accent); color:white; }
+
+
+    .schoolResults { max-height:310px; overflow:auto; display:grid; gap:8px; margin-top:12px; padding-right:3px; }
+    .schoolResult { width:100%; border:1px solid var(--line); background:var(--card2); border-radius:18px; padding:12px 14px; text-align:left; cursor:pointer; }
+    .schoolName { font-size:21px; font-weight:950; letter-spacing:-.03em; }
+    .schoolMeta { margin-top:5px; font-size:15px; font-weight:850; color:var(--muted); line-height:1.25; }
+    .scheduleRows { max-height:430px; overflow:auto; display:grid; gap:8px; margin-top:12px; padding-right:3px; }
+    .scheduleRow { display:grid; grid-template-columns:92px 86px 86px 1fr 38px; gap:8px; align-items:center; background:var(--card2); border:1px solid var(--line); border-radius:16px; padding:9px; }
+    .scheduleRow label { font-size:16px; font-weight:950; color:var(--muted); }
+    .scheduleRow input { height:42px; font-size:18px; text-align:center; padding:0 8px; }
+    .scheduleRow .noteInput { text-align:left; font-size:18px; }
+    .slotDelete { width:34px; height:34px; border:0; border-radius:12px; background:var(--danger); color:#8f2f2f; font-size:20px; font-weight:950; cursor:pointer; }
+    .pointRows { display:grid; gap:10px; margin-top:14px; }
+    .pointRows label { display:grid; grid-template-columns:180px 1fr; align-items:center; gap:10px; font-size:18px; font-weight:950; color:var(--muted); }
+    .pointRows input { height:48px; text-align:center; font-size:24px; }
+    .hintText { font-size:14px; color:var(--muted); font-weight:800; margin-top:8px; line-height:1.35; }
+
+    .capture .toolbar, .capture .miniBtn, .capture .trash, .capture .addTask, .capture .pointSet { display:none !important; }
+
+    .creditMark {
+      position:absolute;
+      right:24px;
+      bottom:7px;
+      z-index:6;
+      font-size:12px;
+      line-height:1;
+      font-weight:800;
+      letter-spacing:-.02em;
+      color:var(--muted);
+      opacity:.42;
+      pointer-events:none;
+      user-select:none;
+      white-space:nowrap;
+    }
+    body[data-dark="true"] .creditMark { opacity:.52; }
+
+    @media (max-aspect-ratio: 3/4) {
+      /* 세로형 휴대폰도 '전체 화면' 안에 들어오도록 여백을 줄임. */
+      .board { padding:10px; }
+    }
+  
+
+    /* v1.20: 현재 시간 흐름은 깜빡임 없이 작은 포인트만 표시 */
+    .flowItem { position:relative; }
+    .flowItem.current {
+      background:linear-gradient(135deg, #fff7cf, #ffd184) !important;
+      color:#1f2d35 !important;
+      border:2px solid #ff9b36 !important;
+      box-shadow:0 0 0 3px rgba(255, 155, 54, .18), 0 8px 18px rgba(166, 86, 0, .16) !important;
+      transform:none !important;
+      animation:none !important;
+    }
+    .flowItem.current .flowTime,
+    .flowItem.current .flowDetail,
+    .flowItem.current .flowName { color:#1f2d35 !important; }
+    .flowItem.current .flowName::before {
+      content:'● ';
+      color:#ff7b00;
+      font-size:.78em;
+      font-weight:950;
+      vertical-align:middle;
+    }
+    .flowItem.current .nowBadge {
+      display:none !important;
+    }
+</style>
+</head>
+<body data-theme="orange" data-dark="false">
+  <div class="viewport">
+    <div class="board" id="board">
+      <header class="topbar card">
+        <input id="titleInput" class="titleInput" value="" placeholder="교실 이름을 입력하세요  예: 여니쌤의 뿜뿜 교실 (클릭해서 변경)" aria-label="우리반 이름" title="클릭해서 우리 반 이름을 변경할 수 있어요" />
+        <div class="toolbar">
+          <div class="pillbox">
+            <button class="dot pink" data-theme="pink" title="분홍"></button>
+            <button class="dot green" data-theme="green" title="초록"></button>
+            <button class="dot blue" data-theme="blue" title="파랑"></button>
+            <button class="dot orange" data-theme="orange" title="주황"></button>
+          </div>
+          <div class="pillbox">
+            <button class="toolbtn" id="darkBtn" title="다크모드">☾</button>
+            <button class="toolbtn printBtn" id="printBtn" title="인쇄 활동지"><span class="printIcon">🖨</span><span class="printLabel">인쇄</span></button>
+            <button class="toolbtn activityBtn" id="activityBtn" title="디지털 활동지"><span class="activityIcon">✍️</span><span class="activityLabel">활동</span></button>
+            <button class="toolbtn" id="saveBtn" title="JPG 저장">⇩</button>
+          </div>
+        </div>
+      </header>
+
+      <main class="main">
+        <section class="left">
+          <article class="card">
+            <div class="card-inner">
+              <div class="head"><div class="h">주간 시간표</div><div class="headActions"><div class="sub">과목 칸에 작성하세요</div><button class="miniBtn" id="timetableImportBtn">파일 불러오기</button></div></div>
+              <div class="timetable" id="timetable"></div>
+            </div>
+          </article>
+          <article class="card bookCard">
+            <div class="bookBox">
+              <div class="bookLabel">📕 <input id="bookLabelInput" class="labelInput" value="" placeholder="오늘의 동화책" aria-label="첫 번째 영역 이름" title="클릭해서 영역 이름을 바꿀 수 있어요" /> :</div>
+              <input id="bookInput" class="bookInput" value="" placeholder="입력하세요  예: 빨강" aria-label="오늘의 동화책 제목" />
+            </div>
+          </article>
+          <article class="card wordCard">
+            <div class="bookBox">
+              <div class="bookLabel">💡 <input id="wordLabelInput" class="labelInput" value="" placeholder="오늘의 배움단어" aria-label="두 번째 영역 이름" title="클릭해서 영역 이름을 바꿀 수 있어요" /> :</div>
+              <input id="wordInput" class="bookInput" value="" placeholder="입력하세요  예: 사랑" aria-label="오늘의 배움 단어" />
+            </div>
+          </article>
+          <section class="bottom">
+            <article class="card clockCard"><div class="card-inner"><div class="clockDisplay"><div class="date" id="dateText">-</div><div class="time" id="timeText">00:00</div><div class="analogClock" aria-label="아날로그 시계"><span class="clockNum n12">12</span><span class="clockNum n1">1</span><span class="clockNum n2">2</span><span class="clockNum n3">3</span><span class="clockNum n4">4</span><span class="clockNum n5">5</span><span class="clockNum n6">6</span><span class="clockNum n7">7</span><span class="clockNum n8">8</span><span class="clockNum n9">9</span><span class="clockNum n10">10</span><span class="clockNum n11">11</span><div class="hand hourHand" id="hourHand"></div><div class="hand minuteHand" id="minuteHand"></div><div class="centerPin"></div></div></div></div></article>
+            <article class="card"><div class="card-inner">
+              <div class="head"><div class="h">날씨 · 대기</div><button class="miniBtn" id="regionBtn">📍 이천</button></div>
+              <div class="weatherGrid">
+                <div class="weatherBox"><div class="emoji" id="weatherEmoji">🌤️</div><div class="weatherMain" id="tempText">--℃</div><div class="weatherSmall" id="weatherText">날씨 확인 중</div></div>
+                <div class="weatherBox"><div class="emoji">💧</div><div class="weatherMain" id="humidityText">--%</div><div class="weatherSmall" id="windText">바람 --</div></div>
+                <div class="weatherBox"><div class="emoji">😶‍🌫️</div><div class="weatherMain" id="pm10Text">--</div><div class="weatherSmall" id="pm10Grade">미세먼지</div></div>
+                <div class="weatherBox"><div class="emoji">😷</div><div class="weatherMain" id="pm25Text">--</div><div class="weatherSmall" id="pm25Grade">초미세먼지</div></div>
+              </div>
+            </div></article>
+          </section>
+        </section>
+
+        <section class="center">
+          <article class="card"><div class="card-inner">
+            <div class="head"><div class="h">오늘의 흐름</div><div><button class="miniBtn" id="scheduleBtn">시간·활동 수정</button> <span class="sub" id="weekdayText">월요일</span></div></div>
+            <div class="flowList" id="flowList"></div>
+          </div></article>
+          <article class="card"><div class="card-inner">
+            <div class="head"><div class="h">오늘의 급식</div><button class="miniBtn" id="schoolBtn">학교 설정</button></div>
+            <div class="mealList" id="mealList"><div class="mealEmpty">급식 정보를 불러오는 중</div></div>
+            <div class="bestMealBox"><div class="bestMealTitle">🏆 우리반 최고 음식</div><div class="bestMealText" id="bestMealText">메뉴를 클릭해 뽑아 주세요</div></div>
+          </div></article>
+        </section>
+
+        <section class="right">
+          <article class="card pointCard" id="pointCard">
+            <div class="pointInfo">
+              <div class="pointLabel">🌟 우리반 포인트</div>
+              <div class="pointScoreWrap"><span id="pointScore" class="pointScore">100</span><span class="pointUnit">점</span></div>
+            </div>
+            <div class="pointControls">
+              <button class="faceBtn goodFace" id="pointPlusBtn" title="칭찬 포인트 올리기">😊</button>
+              <button class="faceBtn warnFace" id="pointMinusBtn" title="주의 포인트 줄이기">☹️</button>
+              <button class="pointSet" id="pointSettingBtn">값 설정</button>
+            </div>
+          </article>
+          <article class="timerBox" id="nowBox">
+            <div class="timerHeader"><div class="timerTitle">⏱ 타이머</div></div>
+            <div class="timerDisplay" id="timerDisplay">5:00</div>
+            <div class="timerControls">
+              <label class="timerSet">시간 <input id="timerMinutes" class="timerInput" type="number" min="1" max="180" step="1" value="5" aria-label="타이머 분" /> 분</label>
+              <button class="timerBtn" id="timerStartBtn">시작</button>
+              <button class="timerBtn stop" id="timerStopBtn">정지</button>
+              <button class="timerBtn attention" id="attentionBtn">주의집중</button>
+            </div>
+            <div class="timerTrack" aria-hidden="true"><div class="timerFill" id="timerFill"></div></div>
+          </article>
+          <article class="card"><div class="card-inner">
+            <div class="head"><div class="h">오늘의 할 일</div><div class="sub">작성하세요 · 체크 가능</div></div>
+            <div class="taskList" id="taskList"></div>
+            <button class="addTask" id="addTaskBtn">+ 할 일 추가</button>
+          </div></article>
+        </section>
+      </main>
+      <div class="creditMark">제작 · 수다쟁이 여니쌤</div>
+    </div>
+  </div>
+
+  <div class="attentionOverlay fullscreenOverlay" id="attentionOverlay">
+    <button class="homeViewBtn" id="attentionHomeBtn" type="button">홈화면으로 보기</button>
+    <div class="attentionContent">
+      <div class="attentionEyesWrap" aria-hidden="true"><span class="sparkle s1">✨</span><span class="sparkle s2">✨</span><div class="attentionEye"><span></span></div><div class="attentionEye"><span></span></div><span class="sparkle s3">✨</span><span class="sparkle s4">✨</span></div>
+      <div class="attentionText">선생님을 보세요</div>
+    </div>
+  </div>
+
+  <div class="timerFocusOverlay fullscreenOverlay" id="timerFocusOverlay">
+    <button class="homeViewBtn" id="timerHomeBtn" type="button">홈화면으로 보기</button>
+    <div class="timerFocusCard">
+      <div class="focusTimerTitle">⏱ 타이머</div>
+      <div class="focusTimerDisplay" id="focusTimerDisplay">5:00</div>
+      <div class="focusTimerTrack" aria-hidden="true"><div class="focusTimerFill" id="focusTimerFill"></div></div>
+      <div class="focusTimerSub" id="focusTimerSub">집중해서 활동해요</div>
+    </div>
+  </div>
+
+  <div class="modalBackdrop" id="regionModal">
+    <div class="modal">
+      <h2>지역 바꾸기</h2>
+      <p>날씨와 미세먼지를 볼 지역명을 입력하세요. 예: 이천, 서울, 부산, 제주<br />현재 위치를 쓰려면 <b>현재위치</b>라고 입력하세요.</p>
+      <input id="regionInput" placeholder="예: 이천, 진해, 분당, 강남, 제주" />
+      <div class="modalActions"><button class="cancel" data-close-modal>취소</button><button class="ok" id="regionOk">검색/적용</button></div>
+      <div class="schoolResults" id="regionResults"><div class="mealEmpty">지역명을 입력한 뒤 검색/적용을 눌러 주세요.</div></div>
+      <div class="hintText">시·군·구·동·읍·면 이름을 검색할 수 있습니다. 검색 결과가 여러 개이면 원하는 지역을 클릭하세요.</div>
+    </div>
+  </div>
+
+
+
+  <div class="modalBackdrop" id="schoolModal">
+    <div class="modal">
+      <h2>학교 급식 설정</h2>
+      <p>학교명을 입력하면 같은 이름의 학교가 모두 나옵니다. 학교명 옆의 지역을 보고 우리 학교를 클릭하세요.</p>
+      <input id="schoolSearchInput" placeholder="예: 한내초, 한내초등학교" />
+      <div class="modalActions">
+        <button class="cancel" data-close-school>닫기</button>
+        <button class="ok" id="schoolSearchBtn">검색</button>
+      </div>
+      <div class="schoolResults" id="schoolResults"><div class="mealEmpty">학교명을 검색해 주세요.</div></div>
+      <div class="hintText">검색 결과가 여러 개이면 주소와 교육청을 확인한 뒤 선택하세요.</div>
+    </div>
+  </div>
+
+
+  <div class="modalBackdrop" id="timetableImportModal">
+    <div class="modal wide">
+      <h2>주간 시간표 파일 불러오기</h2>
+      <p>엑셀(.xlsx/.xls), CSV, TSV 파일을 끌어다 놓거나 선택하세요. 구글 시트/독스는 Excel 또는 CSV로 내려받아 올리면 됩니다.</p>
+      <div class="dropZone" id="timetableDropZone">
+        <div class="dropIcon">📂</div>
+        <div class="dropTitle">시간표 파일을 여기에 끌어다 놓기</div>
+        <div class="dropHelp">또는 클릭해서 파일 선택 · 월~금 / 1~6교시 표를 자동으로 읽어요.</div>
+      </div>
+      <input id="timetableFileInput" type="file" accept=".xlsx,.xls,.csv,.tsv,.txt" hidden />
+      <textarea id="timetablePaste" class="pasteBox" placeholder="엑셀이나 구글 시트에서 월~금 시간표 범위를 복사해서 여기에 붙여넣어도 됩니다."></textarea>
+      <div class="modalActions" style="justify-content:space-between; align-items:center;">
+        <button class="cancel" id="parsePastedTimetableBtn">붙여넣은 표 읽기</button>
+        <div>
+          <button class="cancel" data-close-import>취소</button>
+          <button class="ok" id="applyTimetableImportBtn" disabled>시간표 적용</button>
+        </div>
+      </div>
+      <div id="timetableImportPreview" class="importPreview" style="display:none"></div>
+      <div class="importNotice">권장 형식: 첫 줄에 월, 화, 수, 목, 금 / 왼쪽에 1교시~6교시가 있으면 가장 정확합니다.</div>
+    </div>
+  </div>
+
+  <div class="modalBackdrop" id="pointModal">
+    <div class="modal pointModal">
+      <h2>우리반 포인트 설정</h2>
+      <p>교실 상황에 맞게 현재 점수와 버튼 1회당 점수 변화를 정하세요.</p>
+      <div class="pointRows">
+        <label>현재 점수 <input id="pointScoreInput" type="number" min="0" max="999" step="1" /></label>
+        <label>😊 웃는 얼굴 1회 <input id="pointPlusInput" type="number" min="1" max="100" step="1" /></label>
+        <label>☹️ 찡그린 얼굴 1회 <input id="pointMinusInput" type="number" min="1" max="100" step="1" /></label>
+      </div>
+      <div class="modalActions">
+        <button class="cancel" data-close-point>취소</button>
+        <button class="ok" id="savePointBtn">저장</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modalBackdrop" id="scheduleModal">
+    <div class="modal wide">
+      <h2>시간 및 활동 수정</h2>
+      <p>시작·끝 시간과 오늘의 활동 내용을 함께 바꿀 수 있습니다. 활동은 비워 두면 교과명만 보입니다.</p>
+      <div class="scheduleRows" id="scheduleRows"></div>
+      <div class="modalActions">
+        <button class="cancel" id="resetScheduleBtn">초기화</button>
+        <button class="cancel" data-close-schedule>취소</button>
+        <button class="ok" id="saveScheduleBtn">저장</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const DESIGN_W = 1600;
+    const DESIGN_H = 900;
+    const STORAGE = 'smart_class_board_fit_v7_school_slots';
+    const KMA_ENDPOINT = 'https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0';
+    const KMA_SERVICE_KEY = 'OaRLlfpKOXJH%2BFeghkAojoaSAQbb1bkFF9COvGfjixpiLkEYTHFLqIcBYqFb0HCrcX8H3A47X9QNiRpgcCXAOA%3D%3D';
+    const DAYS = [
+      ['mon','월'], ['tue','화'], ['wed','수'], ['thu','목'], ['fri','금']
+    ];
+    const DEFAULT_SLOTS = [
+      {s:'08:40', e:'09:00', type:'event', label:'아침활동', sub:'차분히 준비'},
+      {s:'09:00', e:'09:40', type:'period', p:1},
+      {s:'09:40', e:'09:45', type:'event', label:'쉬는시간', sub:'물 마시기'},
+      {s:'09:45', e:'10:25', type:'period', p:2},
+      {s:'10:25', e:'10:30', type:'event', label:'쉬는시간', sub:'다음 수업 준비'},
+      {s:'10:30', e:'11:10', type:'period', p:3},
+      {s:'11:10', e:'11:15', type:'event', label:'쉬는시간', sub:'화장실 다녀오기'},
+      {s:'11:15', e:'11:55', type:'period', p:4},
+      {s:'11:55', e:'12:55', type:'event', label:'점심시간', sub:'맛있게 먹기'},
+      {s:'12:55', e:'13:35', type:'period', p:5},
+      {s:'13:35', e:'13:40', type:'event', label:'쉬는시간', sub:'다음 수업 준비'},
+      {s:'13:40', e:'14:20', type:'period', p:6}
+    ];
+
+    // 지역명 검색이 외부 지오코딩에 의존하지 않도록 전국 주요 시·군·구 대표 좌표를 내장했습니다.
+    // 좌표는 기상청 격자(nx, ny)로 변환되어 단기예보 API에 사용됩니다.
+    const REGIONS = [
+      ['서울특별시',37.5665,126.9780,60,127], ['부산광역시',35.1796,129.0756,98,76], ['대구광역시',35.8714,128.6014,89,90], ['인천광역시',37.4563,126.7052,55,124],
+      ['광주광역시',35.1595,126.8526,58,74], ['대전광역시',36.3504,127.3845,67,100], ['울산광역시',35.5384,129.3114,102,84], ['세종특별자치시',36.4800,127.2890,66,103],
+      ['제주특별자치도 제주시',33.4996,126.5312,52,38], ['제주특별자치도 서귀포시',33.2539,126.5598,52,33],
+      ['경기도 수원시',37.2636,127.0286], ['경기도 성남시',37.4200,127.1265], ['경기도 의정부시',37.7381,127.0337], ['경기도 안양시',37.3943,126.9568],
+      ['경기도 부천시',37.5035,126.7660], ['경기도 광명시',37.4784,126.8644], ['경기도 평택시',36.9921,127.1129], ['경기도 동두천시',37.9037,127.0606],
+      ['경기도 안산시',37.3219,126.8309], ['경기도 고양시',37.6584,126.8320], ['경기도 과천시',37.4292,126.9878], ['경기도 구리시',37.5943,127.1296],
+      ['경기도 남양주시',37.6360,127.2165], ['경기도 오산시',37.1498,127.0772], ['경기도 시흥시',37.3802,126.8029], ['경기도 군포시',37.3617,126.9352],
+      ['경기도 의왕시',37.3447,126.9683], ['경기도 하남시',37.5393,127.2149], ['경기도 용인시',37.2411,127.1776], ['경기도 파주시',37.7599,126.7802],
+      ['경기도 이천시',37.2723,127.4350,68,121], ['경기도 안성시',37.0080,127.2798], ['경기도 김포시',37.6152,126.7157], ['경기도 화성시',37.1996,126.8310],
+      ['경기도 광주시',37.4294,127.2551], ['경기도 양주시',37.7853,127.0458], ['경기도 포천시',37.8949,127.2003], ['경기도 여주시',37.2982,127.6371],
+      ['경기도 연천군',38.0964,127.0747], ['경기도 가평군',37.8315,127.5099], ['경기도 양평군',37.4918,127.4876],
+      ['강원특별자치도 춘천시',37.8813,127.7298], ['강원특별자치도 원주시',37.3422,127.9202], ['강원특별자치도 강릉시',37.7519,128.8761], ['강원특별자치도 동해시',37.5248,129.1143],
+      ['강원특별자치도 태백시',37.1641,128.9856], ['강원특별자치도 속초시',38.2070,128.5918], ['강원특별자치도 삼척시',37.4499,129.1652], ['강원특별자치도 홍천군',37.6972,127.8885],
+      ['강원특별자치도 횡성군',37.4918,127.9851], ['강원특별자치도 영월군',37.1837,128.4617], ['강원특별자치도 평창군',37.3705,128.3902], ['강원특별자치도 정선군',37.3808,128.6609],
+      ['강원특별자치도 철원군',38.1466,127.3132], ['강원특별자치도 화천군',38.1062,127.7080], ['강원특별자치도 양구군',38.1058,127.9895], ['강원특별자치도 인제군',38.0697,128.1704],
+      ['강원특별자치도 고성군',38.3806,128.4676], ['강원특별자치도 양양군',38.0754,128.6190],
+      ['충청북도 청주시',36.6424,127.4890], ['충청북도 충주시',36.9910,127.9259], ['충청북도 제천시',37.1326,128.1909], ['충청북도 보은군',36.4894,127.7295],
+      ['충청북도 옥천군',36.3064,127.5713], ['충청북도 영동군',36.1750,127.7834], ['충청북도 진천군',36.8554,127.4358], ['충청북도 괴산군',36.8154,127.7866],
+      ['충청북도 음성군',36.9402,127.6906], ['충청북도 단양군',36.9845,128.3656], ['충청북도 증평군',36.7854,127.5815],
+      ['충청남도 천안시',36.8151,127.1139], ['충청남도 공주시',36.4466,127.1190], ['충청남도 보령시',36.3334,126.6128], ['충청남도 아산시',36.7898,127.0025],
+      ['충청남도 서산시',36.7845,126.4503], ['충청남도 논산시',36.1871,127.0988], ['충청남도 계룡시',36.2746,127.2486], ['충청남도 당진시',36.8930,126.6283],
+      ['충청남도 금산군',36.1089,127.4883], ['충청남도 부여군',36.2756,126.9098], ['충청남도 서천군',36.0803,126.6918], ['충청남도 청양군',36.4590,126.8023],
+      ['충청남도 홍성군',36.6013,126.6608], ['충청남도 예산군',36.6826,126.8480], ['충청남도 태안군',36.7456,126.2980],
+      ['전북특별자치도 전주시',35.8242,127.1480], ['전북특별자치도 군산시',35.9677,126.7366], ['전북특별자치도 익산시',35.9483,126.9576], ['전북특별자치도 정읍시',35.5699,126.8560],
+      ['전북특별자치도 남원시',35.4164,127.3904], ['전북특별자치도 김제시',35.8036,126.8809], ['전북특별자치도 완주군',35.9047,127.1621], ['전북특별자치도 진안군',35.7917,127.4249],
+      ['전북특별자치도 무주군',36.0069,127.6608], ['전북특별자치도 장수군',35.6473,127.5212], ['전북특별자치도 임실군',35.6179,127.2890], ['전북특별자치도 순창군',35.3744,127.1374],
+      ['전북특별자치도 고창군',35.4358,126.7021], ['전북특별자치도 부안군',35.7317,126.7330],
+      ['전라남도 목포시',34.8118,126.3922], ['전라남도 여수시',34.7604,127.6622], ['전라남도 순천시',34.9506,127.4872], ['전라남도 나주시',35.0158,126.7108],
+      ['전라남도 광양시',34.9407,127.6959], ['전라남도 담양군',35.3211,126.9879], ['전라남도 곡성군',35.2820,127.2919], ['전라남도 구례군',35.2025,127.4629],
+      ['전라남도 고흥군',34.6112,127.2849], ['전라남도 보성군',34.7715,127.0801], ['전라남도 화순군',35.0645,126.9865], ['전라남도 장흥군',34.6816,126.9069],
+      ['전라남도 강진군',34.6421,126.7672], ['전라남도 해남군',34.5733,126.5989], ['전라남도 영암군',34.8002,126.6968], ['전라남도 무안군',34.9905,126.4817],
+      ['전라남도 함평군',35.0659,126.5166], ['전라남도 영광군',35.2772,126.5118], ['전라남도 장성군',35.3019,126.7849], ['전라남도 완도군',34.3109,126.7551],
+      ['전라남도 진도군',34.4868,126.2635], ['전라남도 신안군',34.8334,126.3510],
+      ['경상북도 포항시',36.0190,129.3435], ['경상북도 경주시',35.8562,129.2247], ['경상북도 김천시',36.1398,128.1136], ['경상북도 안동시',36.5684,128.7294],
+      ['경상북도 구미시',36.1195,128.3446], ['경상북도 영주시',36.8057,128.6241], ['경상북도 영천시',35.9733,128.9386], ['경상북도 상주시',36.4109,128.1591],
+      ['경상북도 문경시',36.5866,128.1868], ['경상북도 경산시',35.8251,128.7415], ['경상북도 의성군',36.3527,128.6970], ['경상북도 청송군',36.4363,129.0571],
+      ['경상북도 영양군',36.6667,129.1124], ['경상북도 영덕군',36.4151,129.3652], ['경상북도 청도군',35.6474,128.7340], ['경상북도 고령군',35.7262,128.2629],
+      ['경상북도 성주군',35.9190,128.2829], ['경상북도 칠곡군',35.9956,128.4017], ['경상북도 예천군',36.6577,128.4529], ['경상북도 봉화군',36.8930,128.7326],
+      ['경상북도 울진군',36.9930,129.4003], ['경상북도 울릉군',37.4844,130.9058],
+      ['경상남도 창원시',35.2279,128.6811], ['경상남도 진주시',35.1800,128.1076], ['경상남도 통영시',34.8544,128.4332], ['경상남도 사천시',35.0038,128.0642],
+      ['경상남도 김해시',35.2285,128.8894], ['경상남도 밀양시',35.5038,128.7465], ['경상남도 거제시',34.8806,128.6212], ['경상남도 양산시',35.3350,129.0370],
+      ['경상남도 의령군',35.3222,128.2617], ['경상남도 함안군',35.2725,128.4066], ['경상남도 창녕군',35.5446,128.4923], ['경상남도 고성군',34.9730,128.3222],
+      ['경상남도 남해군',34.8377,127.8926], ['경상남도 하동군',35.0673,127.7512], ['경상남도 산청군',35.4155,127.8735], ['경상남도 함양군',35.5205,127.7252],
+      ['경상남도 거창군',35.6867,127.9095], ['경상남도 합천군',35.5666,128.1658]
+    ];
+
+    // 자주 검색하는 구·동 이름은 별도 별칭으로 보강했습니다.
+    // 목록에 없는 읍·면·동은 아래 온라인 검색 보조 기능으로 좌표를 찾아 기상청 격자로 변환합니다.
+    const EXTRA_REGIONS = [
+      ['경상남도 창원시 진해구',35.1330,128.7100], ['경상남도 창원시 마산합포구',35.1969,128.5679], ['경상남도 창원시 마산회원구',35.2209,128.5797], ['경상남도 창원시 성산구',35.1984,128.7024], ['경상남도 창원시 의창구',35.2540,128.6402],
+      ['경기도 성남시 분당구',37.3826,127.1189], ['경기도 성남시 수정구',37.4504,127.1458], ['경기도 성남시 중원구',37.4305,127.1372],
+      ['경기도 수원시 장안구',37.3036,127.0100], ['경기도 수원시 권선구',37.2576,126.9710], ['경기도 수원시 팔달구',37.2826,127.0175], ['경기도 수원시 영통구',37.2596,127.0466],
+      ['서울특별시 강남구',37.5172,127.0473], ['서울특별시 강동구',37.5301,127.1238], ['서울특별시 강북구',37.6396,127.0257], ['서울특별시 강서구',37.5509,126.8495], ['서울특별시 관악구',37.4784,126.9516], ['서울특별시 광진구',37.5384,127.0823], ['서울특별시 구로구',37.4955,126.8877], ['서울특별시 금천구',37.4569,126.8955], ['서울특별시 노원구',37.6542,127.0568], ['서울특별시 도봉구',37.6688,127.0471], ['서울특별시 동대문구',37.5744,127.0396], ['서울특별시 동작구',37.5124,126.9393], ['서울특별시 마포구',37.5663,126.9016], ['서울특별시 서대문구',37.5791,126.9368], ['서울특별시 서초구',37.4837,127.0324], ['서울특별시 성동구',37.5634,127.0369], ['서울특별시 성북구',37.5894,127.0167], ['서울특별시 송파구',37.5145,127.1059], ['서울특별시 양천구',37.5169,126.8664], ['서울특별시 영등포구',37.5264,126.8962], ['서울특별시 용산구',37.5326,126.9905], ['서울특별시 은평구',37.6176,126.9227], ['서울특별시 종로구',37.5735,126.9788], ['서울특별시 중구',37.5636,126.9976], ['서울특별시 중랑구',37.6063,127.0927],
+      ['부산광역시 해운대구',35.1631,129.1635], ['부산광역시 부산진구',35.1629,129.0532], ['부산광역시 동래구',35.2048,129.0838], ['부산광역시 남구',35.1368,129.0840], ['부산광역시 북구',35.1973,128.9900], ['부산광역시 사하구',35.1045,128.9748], ['부산광역시 금정구',35.2429,129.0921], ['부산광역시 강서구',35.2122,128.9806], ['부산광역시 연제구',35.1762,129.0798], ['부산광역시 수영구',35.1456,129.1131], ['부산광역시 사상구',35.1526,128.9910], ['부산광역시 기장군',35.2448,129.2223],
+      ['대구광역시 달서구',35.8299,128.5327], ['대구광역시 수성구',35.8584,128.6306], ['대구광역시 동구',35.8867,128.6356], ['대구광역시 북구',35.8858,128.5829], ['대구광역시 서구',35.8718,128.5592], ['대구광역시 남구',35.8460,128.5970], ['대구광역시 달성군',35.7746,128.4314], ['대구광역시 군위군',36.2428,128.5729],
+      ['인천광역시 부평구',37.5070,126.7218], ['인천광역시 남동구',37.4474,126.7314], ['인천광역시 연수구',37.4100,126.6783], ['인천광역시 미추홀구',37.4637,126.6505], ['인천광역시 계양구',37.5374,126.7378], ['인천광역시 서구',37.5454,126.6759], ['인천광역시 강화군',37.7465,126.4880], ['인천광역시 옹진군',37.4466,126.6368],
+      ['광주광역시 광산구',35.1399,126.7937], ['광주광역시 북구',35.1741,126.9110], ['광주광역시 서구',35.1520,126.8902], ['광주광역시 남구',35.1330,126.9025], ['광주광역시 동구',35.1460,126.9231],
+      ['대전광역시 유성구',36.3623,127.3562], ['대전광역시 서구',36.3554,127.3838], ['대전광역시 중구',36.3250,127.4213], ['대전광역시 동구',36.3120,127.4549], ['대전광역시 대덕구',36.3467,127.4155],
+      ['울산광역시 남구',35.5438,129.3301], ['울산광역시 중구',35.5686,129.3328], ['울산광역시 동구',35.5048,129.4168], ['울산광역시 북구',35.5827,129.3613], ['울산광역시 울주군',35.5223,129.2423]
+    ];
+
+    let regionSearchResults = [];
+
+    const DEFAULT = {
+      title:'', theme:'orange', dark:false, bookLabel:'오늘의 동화책', wordLabel:'오늘의 배움단어', bookTitle:'', learningWord:'', timer:{minutes:5,end:0,running:false},
+      slots: structuredClone(DEFAULT_SLOTS),
+      flowNotes:{mon:['','','','','',''], tue:['','','','','',''], wed:['','','','','',''], thu:['','','','','',''], fri:['','','','','','']},
+      bestMeal:{date:'', school:'', text:''},
+      points:{score:100, plus:1, minus:5},
+      location:{name:'이천', lat:37.2723, lon:127.4350, nx:68, ny:121, mode:'named'},
+      school:{name:'한내초등학교', office:'J10', code:'7530074'},
+      timetable:{
+        mon:['','수학','통합','','',''],
+        tue:['수학','국어','통합','','',''],
+        wed:['통합','체육','국어','','',''],
+        thu:['미술','통합','영어','','',''],
+        fri:['창체','음악','미술','','','']
+      },
+      tasks:[{text:'아침 인사 나누기', done:false},{text:'알림장 쓰기', done:false},{text:'책상 주변 정리', done:false}]
+    };
+    let data = load();
+    let lastSlot = '';
+    let pendingTimetableImport = null;
+    const $ = id => document.getElementById(id);
+
+    init();
+
+    function init(){
+      fit(); addEventListener('resize', fit); addEventListener('orientationchange', () => setTimeout(fit, 200));
+      ensureLocationGrid();
+      ensureSlots(); ensureFlowNotes(); ensureBestMeal(); ensurePoints(); ensureTimer();
+      applyTheme();
+      $('titleInput').value = data.title;
+      $('bookLabelInput').value = data.bookLabel || '오늘의 동화책';
+      $('wordLabelInput').value = data.wordLabel || '오늘의 배움단어';
+      $('bookInput').value = data.bookTitle || '';
+      $('wordInput').value = data.learningWord || '';
+      if($('timerMinutes')) $('timerMinutes').value = data.timer?.minutes || 5;
+      updateTimerUI();
+      renderTimetable(); renderTasks(); renderFlow(); renderPoints(); tick();
+      setInterval(tick, 1000);
+      fetchWeatherAndAir(); fetchMeal(); bind();
+    }
+
+    function fit(){
+      const scale = Math.min(innerWidth / DESIGN_W, innerHeight / DESIGN_H);
+      document.documentElement.style.setProperty('--scale', String(scale));
+    }
+    function load(){
+      try { return merge(structuredClone(DEFAULT), JSON.parse(localStorage.getItem(STORAGE)) || {}); }
+      catch(e){ return structuredClone(DEFAULT); }
+    }
+    function merge(a,b){
+      Object.keys(b || {}).forEach(k => {
+        if (b[k] && typeof b[k] === 'object' && !Array.isArray(b[k]) && a[k]) a[k] = merge(a[k], b[k]);
+        else a[k] = b[k];
+      });
+      return a;
+    }
+    function save(){ localStorage.setItem(STORAGE, JSON.stringify(data)); }
+
+    function bind(){
+      $('titleInput').addEventListener('input', e => { data.title = e.target.value; save(); });
+      $('bookLabelInput').addEventListener('input', e => { data.bookLabel = e.target.value.trim() || '오늘의 동화책'; save(); });
+      $('wordLabelInput').addEventListener('input', e => { data.wordLabel = e.target.value.trim() || '오늘의 배움단어'; save(); });
+      $('bookInput').addEventListener('input', e => { data.bookTitle = e.target.value; save(); });
+      $('wordInput').addEventListener('input', e => { data.learningWord = e.target.value; save(); });
+      $('timetableImportBtn').addEventListener('click', openTimetableImportModal);
+      $('timetableDropZone').addEventListener('click', () => $('timetableFileInput').click());
+      $('timetableFileInput').addEventListener('change', e => { const file = e.target.files?.[0]; if(file) readTimetableFile(file); });
+      ['dragenter','dragover'].forEach(evt => $('timetableDropZone').addEventListener(evt, e => { e.preventDefault(); $('timetableDropZone').classList.add('dragover'); }));
+      ['dragleave','drop'].forEach(evt => $('timetableDropZone').addEventListener(evt, e => { e.preventDefault(); $('timetableDropZone').classList.remove('dragover'); }));
+      $('timetableDropZone').addEventListener('drop', e => { const file = e.dataTransfer?.files?.[0]; if(file) readTimetableFile(file); });
+      $('parsePastedTimetableBtn').addEventListener('click', parsePastedTimetable);
+      $('applyTimetableImportBtn').addEventListener('click', applyTimetableImport);
+      document.querySelectorAll('[data-close-import]').forEach(b => b.addEventListener('click', closeTimetableImportModal));
+      document.querySelectorAll('.dot').forEach(btn => btn.addEventListener('click', () => { data.theme = btn.dataset.theme; applyTheme(); save(); }));
+      $('darkBtn').addEventListener('click', () => { data.dark = !data.dark; applyTheme(); save(); });
+      $('pointPlusBtn').addEventListener('click', () => changePoints(Number(data.points?.plus || 1), 'good'));
+      $('pointMinusBtn').addEventListener('click', () => changePoints(-Number(data.points?.minus || 1), 'down'));
+      $('pointSettingBtn').addEventListener('click', openPointModal);
+      $('timerStartBtn').addEventListener('click', startClassTimer);
+      $('timerStopBtn').addEventListener('click', stopClassTimer);
+      $('attentionBtn').addEventListener('click', attentionPlease);
+      $('timerHomeBtn')?.addEventListener('click', closeTimerFocusView);
+      $('attentionHomeBtn')?.addEventListener('click', closeAttentionView);
+      $('timerMinutes').addEventListener('input', e => { ensureTimer(); data.timer.minutes = clampNumber(e.target.value, 1, 180, 5); if(!data.timer.running){ data.timer.end = 0; updateTimerUI(); } save(); });
+      $('savePointBtn').addEventListener('click', savePointSettings);
+      document.querySelectorAll('[data-close-point]').forEach(b => b.addEventListener('click', closePointModal));
+      $('regionBtn').addEventListener('click', () => openRegionModal());
+      $('regionOk').addEventListener('click', applyRegionFromModal);
+      document.querySelectorAll('[data-close-modal]').forEach(b => b.addEventListener('click', closeRegionModal));
+      $('regionInput').addEventListener('keydown', e => { if (e.key === 'Enter') applyRegionFromModal(); if (e.key === 'Escape') closeRegionModal(); });
+      $('addTaskBtn').addEventListener('click', addTask);
+      $('schoolBtn').addEventListener('click', openSchoolModal);
+      $('printBtn').addEventListener('click', printDailyWorksheet);
+      $('activityBtn').addEventListener('click', openDailyActivityPage);
+      $('saveBtn').addEventListener('click', saveJpg);
+      $('scheduleBtn').addEventListener('click', openScheduleModal);
+      $('saveScheduleBtn').addEventListener('click', saveScheduleFromModal);
+      $('resetScheduleBtn').addEventListener('click', resetScheduleDefaults);
+      document.querySelectorAll('[data-close-schedule]').forEach(b => b.addEventListener('click', closeScheduleModal));
+      $('schoolSearchBtn').addEventListener('click', searchSchoolList);
+      $('schoolSearchInput').addEventListener('keydown', e => { if (e.key === 'Enter') searchSchoolList(); if (e.key === 'Escape') closeSchoolModal(); });
+      document.querySelectorAll('[data-close-school]').forEach(b => b.addEventListener('click', closeSchoolModal));
+    }
+    function applyTheme(){
+      document.body.dataset.theme = data.theme;
+      document.body.dataset.dark = data.dark ? 'true' : 'false';
+      $('darkBtn').textContent = data.dark ? '☀' : '☾';
+      document.querySelectorAll('.dot').forEach(b => b.classList.toggle('active', b.dataset.theme === data.theme));
+    }
+
+
+    function openTimetableImportModal(){
+      pendingTimetableImport = null;
+      $('timetableFileInput').value = '';
+      $('timetablePaste').value = '';
+      $('applyTimetableImportBtn').disabled = true;
+      $('timetableImportPreview').style.display = 'none';
+      $('timetableImportPreview').innerHTML = '';
+      $('timetableImportModal').classList.add('show');
+    }
+    function closeTimetableImportModal(){ $('timetableImportModal').classList.remove('show'); }
+
+    async function readTimetableFile(file){
+      const name = (file.name || '').toLowerCase();
+      try{
+        let rows;
+        if(name.endsWith('.xlsx') || name.endsWith('.xls')){
+          if(!window.XLSX){
+            alert('엑셀 파일을 읽는 도구를 불러오지 못했어요. 인터넷 연결을 확인하거나 CSV로 저장해서 올려 주세요.');
+            return;
+          }
+          const buffer = await file.arrayBuffer();
+          const workbook = XLSX.read(buffer, {type:'array'});
+          const sheet = workbook.Sheets[workbook.SheetNames[0]];
+          rows = XLSX.utils.sheet_to_json(sheet, {header:1, raw:false, defval:''});
+        } else {
+          const text = await file.text();
+          rows = parseDelimitedText(text);
+        }
+        buildTimetableFromRows(rows, file.name || '파일');
+      }catch(err){
+        console.error(err);
+        alert('시간표 파일을 읽지 못했어요. 월~금/1~6교시 표인지 확인해 주세요.');
+      }
+    }
+
+    function parsePastedTimetable(){
+      const text = $('timetablePaste').value.trim();
+      if(!text){ alert('붙여넣은 표가 없어요.'); return; }
+      buildTimetableFromRows(parseDelimitedText(text), '붙여넣은 표');
+    }
+
+    function parseDelimitedText(text){
+      const clean = String(text || '').replace(/\r/g, '');
+      const delimiter = clean.includes('\t') ? '\t' : ',';
+      if(delimiter === '\t') return clean.split('\n').map(line => line.split('\t').map(v => v.trim()));
+      const rows = [];
+      let row = [], cell = '', quote = false;
+      for(let i=0; i<clean.length; i++){
+        const ch = clean[i], next = clean[i+1];
+        if(ch === '"'){
+          if(quote && next === '"'){ cell += '"'; i++; }
+          else quote = !quote;
+        } else if(ch === ',' && !quote){ row.push(cell.trim()); cell = ''; }
+        else if(ch === '\n' && !quote){ row.push(cell.trim()); rows.push(row); row = []; cell = ''; }
+        else cell += ch;
+      }
+      row.push(cell.trim()); rows.push(row);
+      return rows;
+    }
+
+    function buildTimetableFromRows(rawRows, sourceName){
+      const rows = (rawRows || [])
+        .map(r => Array.from(r || []).map(c => String(c ?? '').replace(/\s+/g, ' ').trim()))
+        .filter(r => r.some(c => c));
+      if(!rows.length){ alert('읽을 수 있는 시간표 내용이 없어요.'); return; }
+      const dayWords = ['월','화','수','목','금'];
+      let headerIndex = -1;
+      let colMap = {};
+      for(let r=0; r<Math.min(rows.length, 8); r++){
+        const map = {};
+        rows[r].forEach((cell, idx) => {
+          dayWords.forEach(day => {
+            const normalized = cell.replace(/요일|\s/g, '');
+            if(normalized === day || normalized.startsWith(day)) map[day] = idx;
+          });
+        });
+        if(Object.keys(map).length >= 3){ headerIndex = r; colMap = map; break; }
+      }
+      const result = { mon:['','','','','',''], tue:['','','','','',''], wed:['','','','','',''], thu:['','','','','',''], fri:['','','','','',''] };
+      const keyByDay = {월:'mon', 화:'tue', 수:'wed', 목:'thu', 금:'fri'};
+
+      if(headerIndex >= 0){
+        for(let p=1; p<=6; p++){
+          let row = rows.find((r, idx) => idx > headerIndex && r.some(c => new RegExp('^\\s*' + p + '\\s*(교시|교|$)').test(c)));
+          if(!row) row = rows[headerIndex + p] || [];
+          dayWords.forEach(day => {
+            const col = colMap[day];
+            if(col !== undefined) result[keyByDay[day]][p-1] = cleanSubject(row[col] || '');
+          });
+        }
+      } else {
+        const candidates = rows.filter(r => r.length >= 5).slice(0, 6);
+        if(candidates.length < 5){ alert('월~금 시간표 표를 찾지 못했어요. 첫 줄에 월, 화, 수, 목, 금이 보이게 저장해 주세요.'); return; }
+        for(let p=0; p<6; p++){
+          const row = candidates[p] || [];
+          for(let d=0; d<5; d++) result[DAYS[d][0]][p] = cleanSubject(row[d] || '');
+        }
+      }
+      pendingTimetableImport = result;
+      renderTimetableImportPreview(result, sourceName || '시간표');
+    }
+
+    function cleanSubject(value){
+      const v = String(value || '').trim();
+      if(!v || v === '-' || v === '작성') return '';
+      return v;
+    }
+
+    function renderTimetableImportPreview(timetable, sourceName){
+      const preview = $('timetableImportPreview');
+      let html = `<table><thead><tr><th>교시</th>${DAYS.map(d=>`<th>${d[1]}</th>`).join('')}</tr></thead><tbody>`;
+      for(let p=1; p<=6; p++){
+        html += `<tr><th>${p}교시</th>${DAYS.map(([key]) => `<td>${esc(timetable[key]?.[p-1] || '')}</td>`).join('')}</tr>`;
+      }
+      html += '</tbody></table>';
+      preview.innerHTML = `<div class="importNotice">${esc(sourceName)}에서 읽은 시간표 미리보기입니다. 맞으면 “시간표 적용”을 누르세요.</div>${html}`;
+      preview.style.display = 'block';
+      $('applyTimetableImportBtn').disabled = false;
+    }
+
+    function applyTimetableImport(){
+      if(!pendingTimetableImport){ alert('적용할 시간표가 없어요.'); return; }
+      data.timetable = structuredClone(pendingTimetableImport);
+      save();
+      renderTimetable(); renderFlow(); updateNowCard();
+      closeTimetableImportModal();
+      alert('주간 시간표를 한 번에 변경했어요.');
+    }
+
+    function renderTimetable(){
+      const today = todayKey();
+      let html = `<div class="trow"><div></div>${DAYS.map(d=>`<div class="thead ${d[0] === today ? 'today' : ''}">${d[1]}</div>`).join('')}</div>`;
+      for(let p=1; p<=6; p++){
+        html += `<div class="trow"><div class="period">${p}교시</div>`;
+        DAYS.forEach(([key]) => {
+          const val = esc(data.timetable[key]?.[p-1] || '');
+          const todayClass = key === today ? ' today' : '';
+          html += `<input class="subjectInput${todayClass}" data-day="${key}" data-p="${p}" value="${val}" placeholder="작성" />`;
+        });
+        html += `</div>`;
+      }
+      $('timetable').innerHTML = html;
+      $('timetable').querySelectorAll('.subjectInput').forEach(inp => {
+        inp.addEventListener('input', e => {
+          const day = e.target.dataset.day;
+          const p = Number(e.target.dataset.p) - 1;
+          data.timetable[day][p] = e.target.value;
+          save();
+          renderFlowOnly(); updateNowCard(); highlightNowCell();
+        });
+      });
+      highlightNowCell();
+    }
+    function highlightNowCell(){
+      document.querySelectorAll('.subjectInput.now').forEach(el => el.classList.remove('now'));
+      const slot = currentSlot();
+      if(slot?.type === 'period'){
+        const day = todayKey();
+        const el = document.querySelector(`.subjectInput[data-day="${day}"][data-p="${slot.p}"]`);
+        if(el) el.classList.add('now');
+      }
+    }
+
+    function renderFlow(){ renderFlowOnly(); updateNowCard(); }
+    function renderFlowOnly(){
+      const day = todayKey();
+      $('weekdayText').textContent = koreanWeekday();
+      $('flowList').style.setProperty('--slot-count', String((data.slots || DEFAULT_SLOTS).length));
+      $('flowList').innerHTML = (data.slots || DEFAULT_SLOTS).map((slot) => {
+        const cur = isCurrent(slot);
+        const time = `${slot.s}-${slot.e}`;
+        if(slot.type === 'period'){
+          const subj = data.timetable[day]?.[slot.p-1] || '과목 없음';
+          const note = getFlowNote(day, slot.p);
+          const detailHtml = note ? `<div class="flowDetail">${esc(note)}</div>` : '';
+          return `<div class="flowItem ${cur?'current':''}"><div class="flowTime">${time}</div><div class="flowContent"><div class="flowName">${slot.p}교시 · ${esc(subj)}</div>${detailHtml}</div><div class="nowBadge" aria-hidden="true"></div></div>`;
+        }
+        const detailHtml = slot.sub ? `<div class="flowDetail">${esc(slot.sub)}</div>` : '';
+        return `<div class="flowItem ${cur?'current':''}"><div class="flowTime">${time}</div><div class="flowContent"><div class="flowName">${esc(slot.label)}</div>${detailHtml}</div><div class="nowBadge" aria-hidden="true"></div></div>`;
+      }).join('');
+    }
+    function editFlowNote(period){
+      const day = todayKey();
+      const subject = data.timetable[day]?.[period-1] || '과목 없음';
+      const current = getFlowNote(day, period);
+      const text = prompt(`${period}교시 ${subject} 뒤에 붙일 내용을 입력하세요.
+예: 지민, 종웅, 예빈
+예: 전화하기
+
+비우면 자동 과목명만 보입니다.`, current);
+      if(text === null) return;
+      ensureFlowNotes();
+      data.flowNotes[day][period-1] = text.trim();
+      save(); renderFlow(); updateNowCard();
+    }
+    function getFlowNote(day, period){
+      ensureFlowNotes();
+      return data.flowNotes?.[day]?.[period-1] || '';
+    }
+    function periodDisplayText(day, period){
+      const subject = data.timetable[day]?.[period-1] || '과목 없음';
+      const note = getFlowNote(day, period);
+      return note ? `${subject} : ${note}` : subject;
+    }
+    function updateNowCard(){
+      // 오른쪽 카드는 타이머 전용으로 사용합니다.
+      // 현재 교시 강조와 상세 내용은 가운데 '오늘의 흐름'에서 계속 자동 표시됩니다.
+    }
+    function tick(){
+      const now = seoulParts();
+      $('dateText').textContent = `${now.year}년 ${now.month}월 ${now.day}일 ${now.week}`;
+      $('timeText').textContent = `${now.hour}:${now.minute}`;
+      updateAnalogClock(now.hour, now.minute, now.second || '00');
+      const slot = currentSlot(); const key = slot ? `${slot.s}-${slot.e}` : 'none';
+      if(key !== lastSlot){ lastSlot = key; renderFlow(); highlightNowCell(); }
+      updateTimerUI();
+    }
+    function updateAnalogClock(hour, minute, second){
+      const h = Number(hour || 0);
+      const m = Number(minute || 0);
+      const s = Number(second || 0);
+      const hourDeg = ((h % 12) + m / 60 + s / 3600) * 30;
+      const minuteDeg = (m + s / 60) * 6;
+      const hourHand = $('hourHand');
+      const minuteHand = $('minuteHand');
+      if(hourHand) hourHand.style.transform = `translate(-50%, -100%) rotate(${hourDeg}deg)`;
+      if(minuteHand) minuteHand.style.transform = `translate(-50%, -100%) rotate(${minuteDeg}deg)`;
+    }
+
+    function ensureTimer(){
+      if(!data.timer) data.timer = {minutes:5, end:0, running:false};
+      data.timer.minutes = clampNumber(data.timer.minutes, 1, 180, 5);
+      data.timer.end = Number(data.timer.end || 0);
+      data.timer.running = !!data.timer.running;
+    }
+    let timerAudioCtx = null;
+    function startClassTimer(){
+      ensureTimer();
+      const minutes = clampNumber($('timerMinutes')?.value || data.timer.minutes, 1, 180, 5);
+      data.timer.minutes = minutes;
+      data.timer.end = Date.now() + minutes * 60 * 1000;
+      data.timer.running = true;
+      save();
+      unlockTimerAudio();
+      updateTimerUI();
+      openTimerFocusView();
+    }
+    function stopClassTimer(){
+      ensureTimer();
+      data.timer.running = false;
+      data.timer.end = 0;
+      save();
+      updateTimerUI();
+    }
+    function updateTimerUI(){
+      ensureTimer();
+      const input = $('timerMinutes');
+      const display = $('timerDisplay');
+      const fill = $('timerFill');
+      const box = $('nowBox');
+      if(!input || !display) return;
+      if(document.activeElement !== input) input.value = data.timer.minutes;
+      const totalMs = Math.max(1, Number(data.timer.minutes || 5)) * 60 * 1000;
+      let displayText = `${data.timer.minutes}:00`;
+      let percent = 100;
+      if(!data.timer.running){
+        display.textContent = displayText;
+        if(fill) fill.style.width = '100%';
+        if(box) box.classList.remove('timerRunning');
+        updateTimerFocusUI(displayText, percent, false);
+        return;
+      }
+      const left = Math.max(0, data.timer.end - Date.now());
+      if(left <= 0){
+        data.timer.running = false;
+        data.timer.end = 0;
+        save();
+        displayText = '끝!';
+        display.textContent = displayText;
+        if(fill) fill.style.width = '0%';
+        if(box) box.classList.remove('timerRunning');
+        updateTimerFocusUI(displayText, 0, false, true);
+        fireTimerAlarm();
+        return;
+      }
+      percent = Math.max(0, Math.min(100, (left / totalMs) * 100));
+      if(fill) fill.style.width = `${percent}%`;
+      if(box) box.classList.add('timerRunning');
+      const total = Math.ceil(left / 1000);
+      const mm = Math.floor(total / 60);
+      const ss = String(total % 60).padStart(2, '0');
+      displayText = `${mm}:${ss}`;
+      display.textContent = displayText;
+      updateTimerFocusUI(displayText, percent, true);
+    }
+    function openTimerFocusView(){
+      const overlay = $('timerFocusOverlay');
+      if(!overlay) return;
+      overlay.classList.add('show');
+      overlay.classList.remove('finished');
+      updateTimerUI();
+    }
+    function closeTimerFocusView(){
+      const overlay = $('timerFocusOverlay');
+      if(overlay) overlay.classList.remove('show', 'finished');
+    }
+    function updateTimerFocusUI(text, percent, running, finished=false){
+      const overlay = $('timerFocusOverlay');
+      const display = $('focusTimerDisplay');
+      const fill = $('focusTimerFill');
+      const sub = $('focusTimerSub');
+      if(display) display.textContent = text;
+      if(fill) fill.style.width = `${Math.max(0, Math.min(100, percent))}%`;
+      if(sub) sub.textContent = finished ? '시간이 끝났어요!' : (running ? '집중해서 활동해요' : '홈화면에서도 타이머를 사용할 수 있어요');
+      if(overlay && finished){
+        overlay.classList.add('show');
+        overlay.classList.remove('finished');
+        void overlay.offsetWidth;
+        overlay.classList.add('finished');
+      }
+    }
+    function unlockTimerAudio(){
+      try{
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if(!Ctx) return;
+        if(!timerAudioCtx) timerAudioCtx = new Ctx();
+        if(timerAudioCtx.state === 'suspended') timerAudioCtx.resume();
+      }catch(e){}
+    }
+    function fireTimerAlarm(){
+      const box = $('nowBox');
+      if(box){ box.classList.remove('timerAlarm'); void box.offsetWidth; box.classList.add('timerAlarm'); setTimeout(() => box.classList.remove('timerAlarm'), 2900); }
+      playTimerAlarmSound();
+      if(navigator.vibrate) navigator.vibrate([140, 60, 140, 60, 220]);
+    }
+    function playTimerAlarmSound(){
+      try{
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if(!Ctx) return;
+        const ctx = timerAudioCtx || new Ctx();
+        timerAudioCtx = ctx;
+        const start = () => {
+          const now = ctx.currentTime + 0.02;
+          [880, 988, 1175, 988, 1175].forEach((freq, i) => {
+            const t = now + i * 0.16;
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = i % 2 ? 'triangle' : 'sine';
+            osc.frequency.setValueAtTime(freq, t);
+            gain.gain.setValueAtTime(0.0001, t);
+            gain.gain.exponentialRampToValueAtTime(0.20, t + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.13);
+            osc.connect(gain); gain.connect(ctx.destination);
+            osc.start(t); osc.stop(t + 0.15);
+          });
+        };
+        if(ctx.state === 'suspended') ctx.resume().then(start).catch(start);
+        else start();
+      }catch(e){}
+    }
+
+    function attentionPlease(){
+      const text = '선생님을 보세요';
+      const overlay = $('attentionOverlay');
+      if(overlay){
+        overlay.classList.add('show');
+      }
+      try{
+        if('speechSynthesis' in window){
+          window.speechSynthesis.cancel();
+          const utter = new SpeechSynthesisUtterance(text);
+          utter.lang = 'ko-KR';
+          utter.rate = 0.86;
+          utter.pitch = 1.05;
+          utter.volume = 1;
+          const voices = window.speechSynthesis.getVoices?.() || [];
+          const koVoice = voices.find(v => /ko|Korean|한국/i.test(v.lang + ' ' + v.name));
+          if(koVoice) utter.voice = koVoice;
+          window.speechSynthesis.speak(utter);
+        }
+      }catch(e){}
+      playAttentionTone();
+      if(navigator.vibrate) navigator.vibrate([80, 40, 80]);
+    }
+    function closeAttentionView(){
+      const overlay = $('attentionOverlay');
+      if(overlay) overlay.classList.remove('show');
+      try{ if('speechSynthesis' in window) window.speechSynthesis.cancel(); }catch(e){}
+    }
+    function playAttentionTone(){
+      try{
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if(!Ctx) return;
+        const ctx = timerAudioCtx || new Ctx();
+        timerAudioCtx = ctx;
+        const start = () => {
+          const now = ctx.currentTime + 0.02;
+          [660, 880].forEach((freq, i) => {
+            const t = now + i * 0.12;
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, t);
+            gain.gain.setValueAtTime(0.0001, t);
+            gain.gain.exponentialRampToValueAtTime(0.12, t + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.10);
+            osc.connect(gain); gain.connect(ctx.destination);
+            osc.start(t); osc.stop(t + 0.12);
+          });
+        };
+        if(ctx.state === 'suspended') ctx.resume().then(start).catch(start);
+        else start();
+      }catch(e){}
+    }
+
+    let pointTimer = null;
+    function renderPoints(){
+      ensurePoints();
+      const scoreEl = $('pointScore');
+      if(scoreEl) scoreEl.textContent = String(data.points.score);
+    }
+    function openPointModal(){
+      ensurePoints();
+      $('pointScoreInput').value = data.points.score;
+      $('pointPlusInput').value = data.points.plus;
+      $('pointMinusInput').value = data.points.minus;
+      $('pointModal').classList.add('show');
+      setTimeout(() => $('pointScoreInput').focus(), 50);
+    }
+    function closePointModal(){ $('pointModal').classList.remove('show'); }
+    function savePointSettings(){
+      data.points = {
+        score: clampNumber($('pointScoreInput').value, 0, 999, 100),
+        plus: clampNumber($('pointPlusInput').value, 1, 100, 1),
+        minus: clampNumber($('pointMinusInput').value, 1, 100, 5)
+      };
+      save(); renderPoints(); closePointModal(); flashPoint('good');
+    }
+    function changePoints(delta, mood){
+      ensurePoints();
+      const from = Number(data.points.score || 0);
+      const to = Math.max(0, Math.min(999, from + Number(delta || 0)));
+      data.points.score = to;
+      save();
+      playPointSound(mood);
+      animatePointScore(from, to, mood);
+    }
+    function animatePointScore(from, to, mood){
+      clearInterval(pointTimer);
+      const scoreEl = $('pointScore');
+      if(!scoreEl) return;
+      const diff = to - from;
+      if(diff === 0){ flashPoint(mood); renderPoints(); return; }
+      let cur = from;
+      const dir = diff > 0 ? 1 : -1;
+      const interval = Math.max(18, Math.min(55, 520 / Math.max(1, Math.abs(diff))));
+      flashPoint(mood);
+      pointTimer = setInterval(() => {
+        cur += dir;
+        scoreEl.textContent = String(cur);
+        scoreEl.classList.remove('good','down');
+        void scoreEl.offsetWidth;
+        scoreEl.classList.add(mood === 'good' ? 'good' : 'down');
+        if(cur === to){ clearInterval(pointTimer); pointTimer = null; }
+      }, interval);
+    }
+    function flashPoint(mood){
+      const card = $('pointCard');
+      const scoreEl = $('pointScore');
+      if(!card || !scoreEl) return;
+      card.classList.remove('goodGlow','warnGlow');
+      scoreEl.classList.remove('good','down');
+      void card.offsetWidth;
+      card.classList.add(mood === 'good' ? 'goodGlow' : 'warnGlow');
+      scoreEl.classList.add(mood === 'good' ? 'good' : 'down');
+      setTimeout(() => { card.classList.remove('goodGlow','warnGlow'); scoreEl.classList.remove('good','down'); }, 760);
+    }
+    function playPointSound(mood){
+      try{
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if(!Ctx) return;
+        const ctx = new Ctx();
+        const startSound = () => {
+          const now = ctx.currentTime + 0.01;
+          if(mood === 'good'){
+            [659, 784, 988].forEach((freq, i) => {
+              const t = now + i * 0.09;
+              const osc = ctx.createOscillator();
+              const gain = ctx.createGain();
+              osc.type = 'sine';
+              osc.frequency.setValueAtTime(freq, t);
+              gain.gain.setValueAtTime(0.0001, t);
+              gain.gain.exponentialRampToValueAtTime(0.14, t + 0.015);
+              gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.14);
+              osc.connect(gain); gain.connect(ctx.destination);
+              osc.start(t); osc.stop(t + 0.16);
+            });
+            setTimeout(() => ctx.close(), 650);
+            return;
+          }
+
+          // 찡그린 얼굴은 교실에서도 들리도록 더 높은 음역 + 큰 볼륨의 짧은 경고음으로 재생
+          const master = ctx.createGain();
+          master.gain.setValueAtTime(0.0001, now);
+          master.gain.exponentialRampToValueAtTime(0.24, now + 0.025);
+          master.gain.exponentialRampToValueAtTime(0.0001, now + 0.55);
+          master.connect(ctx.destination);
+
+          const osc1 = ctx.createOscillator();
+          osc1.type = 'sawtooth';
+          osc1.frequency.setValueAtTime(760, now);
+          osc1.frequency.linearRampToValueAtTime(420, now + 0.22);
+          osc1.frequency.setValueAtTime(760, now + 0.28);
+          osc1.frequency.linearRampToValueAtTime(390, now + 0.50);
+          osc1.connect(master);
+          osc1.start(now); osc1.stop(now + 0.56);
+
+          const osc2 = ctx.createOscillator();
+          osc2.type = 'square';
+          osc2.frequency.setValueAtTime(380, now);
+          osc2.frequency.setValueAtTime(320, now + 0.28);
+          osc2.connect(master);
+          osc2.start(now); osc2.stop(now + 0.56);
+
+          if(navigator.vibrate) navigator.vibrate([80, 40, 80]);
+          setTimeout(() => ctx.close(), 850);
+        };
+        if(ctx.state === 'suspended') ctx.resume().then(startSound).catch(startSound);
+        else startSound();
+      }catch(e){}
+    }
+    function clampNumber(v, minValue, maxValue, fallback){
+      const n = Number(v);
+      if(!Number.isFinite(n)) return fallback;
+      return Math.max(minValue, Math.min(maxValue, Math.round(n)));
+    }
+
+    function renderTasks(){
+      const list = $('taskList');
+      list.innerHTML = data.tasks.slice(0,5).map((t,i)=>`<div class="task ${t.done?'done':''}" data-i="${i}"><button class="check">✓</button><input class="taskInput" value="${esc(t.text)}" placeholder="작성하세요" /><button class="trash">🗑</button></div>`).join('');
+      if(!data.tasks.length) list.innerHTML = `<div class="mealEmpty">할 일을 추가해 주세요</div>`;
+      list.querySelectorAll('.task').forEach(el => {
+        const i = Number(el.dataset.i);
+        el.querySelector('.check').addEventListener('click', () => { data.tasks[i].done = !data.tasks[i].done; save(); renderTasks(); });
+        el.querySelector('.trash').addEventListener('click', () => { data.tasks.splice(i,1); save(); renderTasks(); });
+        el.querySelector('.taskInput').addEventListener('input', e => { data.tasks[i].text = e.target.value; save(); });
+      });
+    }
+    function addTask(){
+      if(data.tasks.length >= 5){ alert('한 화면에 보이도록 할 일은 최대 5개까지만 표시됩니다.'); return; }
+      data.tasks.push({text:'새 할 일', done:false}); save(); renderTasks();
+    }
+
+    function openRegionModal(){
+      $('regionInput').value = data.location.name || '';
+      regionSearchResults = [];
+      const box = $('regionResults');
+      if(box) box.innerHTML = '<div class="mealEmpty">지역명을 입력한 뒤 검색/적용을 눌러 주세요.</div>';
+      $('regionModal').classList.add('show');
+      setTimeout(()=>$('regionInput').focus(), 50);
+    }
+    function closeRegionModal(){ $('regionModal').classList.remove('show'); }
+    async function applyRegionFromModal(){
+      const q = $('regionInput').value.trim(); if(!q) return;
+      const resultBox = $('regionResults');
+      if(resultBox) resultBox.innerHTML = '<div class="mealEmpty">지역을 검색하는 중입니다...</div>';
+      $('regionBtn').textContent = '📍 검색중';
+      if(q.replace(/\s/g,'') === '현재위치'){
+        if(!navigator.geolocation){ alert('이 브라우저는 현재 위치를 지원하지 않아요. 지역명을 직접 입력해 주세요.'); updateRegionButton(); return; }
+        navigator.geolocation.getCurrentPosition(pos => {
+          const grid = dfsGrid(pos.coords.latitude, pos.coords.longitude);
+          data.location = {name:'현재위치', lat:pos.coords.latitude, lon:pos.coords.longitude, nx:grid.x, ny:grid.y, mode:'current'}; save(); updateRegionButton(); closeRegionModal(); fetchWeatherAndAir();
+        }, () => { alert('현재 위치 권한이 필요해요. 지역명을 직접 입력해 주세요.'); updateRegionButton(); }, {timeout:8000, maximumAge:600000});
+        return;
+      }
+      const localMatches = findRegionMatches(q);
+      if(localMatches.length === 1){
+        selectRegion(localMatches[0]);
+        return;
+      }
+      if(localMatches.length > 1){
+        showRegionResults(localMatches, '검색 결과가 여러 개입니다. 원하는 지역을 클릭하세요.');
+        updateRegionButton();
+        return;
+      }
+      const onlineMatches = await searchRegionOnline(q);
+      if(onlineMatches.length === 1){
+        selectRegion(onlineMatches[0]);
+        return;
+      }
+      if(onlineMatches.length > 1){
+        showRegionResults(onlineMatches, '전국 검색 결과입니다. 원하는 지역을 클릭하세요.');
+        updateRegionButton();
+        return;
+      }
+      const manual = prompt('지역을 찾지 못했어요.\n예: 이천, 진해, 분당, 강남, 제주, 부산 해운대\n\n직접 격자값을 알고 있으면 nx,ny 형식으로 입력할 수도 있어요. 예: 68,121');
+      if(manual && /^\s*\d+\s*,\s*\d+\s*$/.test(manual)){
+        const [nx,ny] = manual.split(',').map(v => Number(v.trim()));
+        data.location = {name:q, lat:data.location.lat || 37.2723, lon:data.location.lon || 127.4350, nx, ny, mode:'grid'};
+        save(); updateRegionButton(); closeRegionModal(); fetchWeatherAndAir();
+      } else updateRegionButton();
+    }
+    function updateRegionButton(){ $('regionBtn').textContent = `📍 ${data.location.name || '지역'}`; }
+    function ensureLocationGrid(){
+      if(!data.location) data.location = structuredClone(DEFAULT.location);
+      if((!data.location.nx || !data.location.ny) && data.location.lat && data.location.lon){
+        const g = dfsGrid(data.location.lat, data.location.lon);
+        data.location.nx = g.x; data.location.ny = g.y;
+      }
+    }
+
+    function ensureSlots(){
+      if(!Array.isArray(data.slots) || data.slots.length !== DEFAULT_SLOTS.length) data.slots = structuredClone(DEFAULT_SLOTS);
+      data.slots = data.slots.map((slot, idx) => ({...DEFAULT_SLOTS[idx], ...slot})).filter(Boolean);
+      save();
+    }
+    function ensureFlowNotes(){
+      if(!data.flowNotes || typeof data.flowNotes !== 'object') data.flowNotes = {};
+      ['mon','tue','wed','thu','fri'].forEach(day => {
+        if(!Array.isArray(data.flowNotes[day])) data.flowNotes[day] = ['','','','','',''];
+        while(data.flowNotes[day].length < 6) data.flowNotes[day].push('');
+      });
+    }
+    function ensureBestMeal(){
+      if(!data.bestMeal || typeof data.bestMeal !== 'object') data.bestMeal = {date:'', school:'', text:''};
+    }
+    function ensurePoints(){
+      if(!data.points || typeof data.points !== 'object') data.points = {score:100, plus:1, minus:5};
+      data.points.score = clampNumber(data.points.score, 0, 999, 100);
+      data.points.plus = clampNumber(data.points.plus, 1, 100, 1);
+      data.points.minus = clampNumber(data.points.minus, 1, 100, 5);
+    }
+
+    function regionObjects(){
+      return REGIONS.concat(EXTRA_REGIONS || []).map(r => {
+        const [name, lat, lon, nx, ny] = r;
+        const parts = name.split(' ');
+        const last = parts[parts.length-1];
+        const short = last.replace(/(특별자치도|특별자치시|특별시|광역시|자치도|시|군|구|읍|면|동)$/,'');
+        const province = parts[0] || '';
+        const city = parts.length > 2 ? parts[1] : '';
+        const provinceShort = province.replace(/(특별자치도|특별자치시|특별시|광역시|자치도|도)$/,'');
+        const cityShort = city.replace(/(시|군|구)$/,'');
+        const aliases = [
+          name, name.replace(/\s/g,''), last, short, `${short}시`, `${short}군`, `${short}구`, `${short}읍`, `${short}면`, `${short}동`,
+          `${provinceShort}${short}`, `${provinceShort} ${short}`, `${cityShort}${short}`, `${cityShort} ${short}`
+        ];
+        if(name.includes('서울')) aliases.push('서울');
+        if(name.includes('부산')) aliases.push('부산');
+        if(name.includes('대구')) aliases.push('대구');
+        if(name.includes('인천')) aliases.push('인천');
+        if(name === '광주광역시') aliases.push('광주');
+        if(name.includes('대전')) aliases.push('대전');
+        if(name.includes('울산')) aliases.push('울산');
+        if(name.includes('세종')) aliases.push('세종');
+        if(name.includes('제주시')) aliases.push('제주', '제주시');
+        if(name === '경기도 광주시') aliases.push('경기광주', '광주경기');
+        if(name.includes('진해구')) aliases.push('진해', '진해구');
+        if(name.includes('분당구')) aliases.push('분당', '분당구');
+        return {name, shortName:last, lat, lon, nx, ny, aliases:aliases.map(normRegion), source:'내장 지역'};
+      });
+    }
+    function findRegion(query){
+      return findRegionMatches(query)[0] || null;
+    }
+    function findRegionMatches(query){
+      const q = normRegion(query);
+      if(!q) return [];
+      const all = regionObjects();
+      const exact = all.filter(r => r.aliases.includes(q));
+      if(exact.length) return uniqueRegions(exact).slice(0, 8);
+      const partial = all.filter(r => r.aliases.some(a => a.includes(q) || q.includes(a)));
+      return uniqueRegions(partial).slice(0, 8);
+    }
+    function uniqueRegions(list){
+      const seen = new Set();
+      return list.filter(r => {
+        const key = `${r.name}-${Math.round(Number(r.lat)*1000)}-${Math.round(Number(r.lon)*1000)}`;
+        if(seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    }
+    function normRegion(s){ return String(s || '').toLowerCase().replace(/\s/g,'').replace(/특별자치도|특별자치시|특별시|광역시|자치도/g,''); }
+    function selectRegion(region){
+      const grid = region.nx && region.ny ? {x:region.nx, y:region.ny} : dfsGrid(Number(region.lat), Number(region.lon));
+      const display = region.shortName || region.name || '선택 지역';
+      data.location = {name:display, lat:Number(region.lat), lon:Number(region.lon), nx:grid.x, ny:grid.y, mode:region.source || 'search'};
+      save(); updateRegionButton(); closeRegionModal(); fetchWeatherAndAir();
+    }
+    function showRegionResults(results, message){
+      regionSearchResults = results || [];
+      const box = $('regionResults');
+      if(!box) return;
+      if(!regionSearchResults.length){ box.innerHTML = '<div class="mealEmpty">검색 결과가 없습니다.</div>'; return; }
+      box.innerHTML = `<div class="mealEmpty">${esc(message || '검색 결과를 선택하세요.')}</div>` + regionSearchResults.map((r, i) => {
+        const grid = r.nx && r.ny ? `격자 ${r.nx}, ${r.ny}` : '자동 격자 변환';
+        const meta = [r.name, r.source || '', grid].filter(Boolean).join(' · ');
+        return `<button class="schoolResult" type="button" data-region-index="${i}"><div class="schoolName">📍 ${esc(r.shortName || r.name)}</div><div class="schoolMeta">${esc(meta)}</div></button>`;
+      }).join('');
+      box.querySelectorAll('[data-region-index]').forEach(btn => {
+        btn.addEventListener('click', () => selectRegion(regionSearchResults[Number(btn.dataset.regionIndex)]));
+      });
+    }
+    async function searchRegionOnline(query){
+      const q = query.trim();
+      const results = [];
+      try{
+        const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=10&language=ko&format=json`;
+        const res = await fetch(url);
+        if(res.ok){
+          const json = await res.json();
+          (json.results || []).filter(x => x.country_code === 'KR' || x.country === '대한민국' || x.country === 'South Korea').forEach(x => {
+            const parts = [x.admin1, x.admin2, x.admin3, x.name].filter(Boolean);
+            results.push({
+              name: parts.join(' '),
+              shortName: x.name,
+              lat: Number(x.latitude),
+              lon: Number(x.longitude),
+              source: '전국 온라인 검색'
+            });
+          });
+        }
+      }catch(e){}
+      try{
+        const url = `https://nominatim.openstreetmap.org/search?format=json&limit=10&countrycodes=kr&accept-language=ko&q=${encodeURIComponent(q)}`;
+        const res = await fetch(url);
+        if(res.ok){
+          const json = await res.json();
+          (json || []).forEach(x => {
+            const name = x.display_name || q;
+            const first = name.split(',')[0].trim() || q;
+            results.push({
+              name,
+              shortName: first,
+              lat: Number(x.lat),
+              lon: Number(x.lon),
+              source: '전국 온라인 검색'
+            });
+          });
+        }
+      }catch(e){}
+      return uniqueRegions(results.filter(r => Number.isFinite(r.lat) && Number.isFinite(r.lon))).slice(0, 8);
+    }
+
+    async function fetchWeatherAndAir(){
+      updateRegionButton(); ensureLocationGrid();
+      const loc = data.location;
+      $('weatherText').textContent = '기상청 조회 중';
+      $('pm10Grade').textContent = '미세먼지 조회 중';
+      $('pm25Grade').textContent = '초미세 조회 중';
+      try{
+        const kma = await fetchKmaWeather(loc.nx, loc.ny);
+        const wc = kmaWeather(kma.SKY, kma.PTY);
+        $('weatherEmoji').textContent = wc.emoji;
+        $('tempText').textContent = hasValue(kma.T1H) ? `${Math.round(Number(kma.T1H))}℃` : '--℃';
+        const rain = hasValue(kma.RN1) && String(kma.RN1) !== '강수없음' && Number(kma.RN1) > 0 ? ` · 강수 ${kma.RN1}mm` : '';
+        $('weatherText').textContent = `${wc.text}${rain}`;
+        $('humidityText').textContent = hasValue(kma.REH) ? `${Math.round(Number(kma.REH))}%` : '--%';
+        $('windText').textContent = hasValue(kma.WSD) ? `바람 ${Number(kma.WSD).toFixed(1)}m/s` : '바람 --';
+      }catch(e){
+        $('weatherEmoji').textContent = '🌈';
+        $('tempText').textContent = '--℃';
+        $('weatherText').textContent = '기상청 조회 실패';
+        $('humidityText').textContent = '--%';
+        $('windText').textContent = '바람 --';
+      }
+      try{
+        const air = await fetchAirQuality(loc.lat, loc.lon);
+        $('pm10Text').textContent = air.pm10 || '--'; $('pm10Grade').textContent = `미세먼지 ${gradePM10(air.pm10)}`;
+        $('pm25Text').textContent = air.pm25 || '--'; $('pm25Grade').textContent = `초미세 ${gradePM25(air.pm25)}`;
+      }catch(e){
+        $('pm10Text').textContent = '--'; $('pm10Grade').textContent = '미세먼지 조회 실패';
+        $('pm25Text').textContent = '--'; $('pm25Grade').textContent = '초미세 조회 실패';
+      }
+    }
+
+    async function fetchKmaWeather(nx, ny){
+      for(let back=0; back<4; back++){
+        const base = kmaBase(back);
+        const url = `${KMA_ENDPOINT}/getUltraSrtFcst?serviceKey=${KMA_SERVICE_KEY}&pageNo=1&numOfRows=1000&dataType=JSON&base_date=${base.date}&base_time=${base.time}&nx=${nx}&ny=${ny}`;
+        try{
+          const res = await fetch(url);
+          const json = await res.json();
+          const items = json.response?.body?.items?.item || [];
+          if(items.length) return pickKmaItems(items);
+        }catch(e){}
+      }
+      throw new Error('KMA weather failed');
+    }
+    function pickKmaItems(items){
+      const now = seoulParts();
+      const target = `${now.hour}${now.minute}`;
+      const result = {};
+      ['T1H','REH','WSD','SKY','PTY','RN1'].forEach(cat => {
+        const rows = items.filter(x => x.category === cat).sort((a,b) => String(a.fcstTime).localeCompare(String(b.fcstTime)));
+        const row = rows.find(x => String(x.fcstTime) >= target) || rows[0];
+        if(row) result[cat] = row.fcstValue;
+      });
+      return result;
+    }
+    function kmaBase(extraBackHours=0){
+      const p = seoulParts();
+      const d = new Date(Date.UTC(Number(p.year), Number(p.month)-1, Number(p.day), Number(p.hour), Number(p.minute)));
+      if(Number(p.minute) < 45) d.setUTCHours(d.getUTCHours() - 1);
+      if(extraBackHours) d.setUTCHours(d.getUTCHours() - extraBackHours);
+      return {
+        date: `${d.getUTCFullYear()}${pad(d.getUTCMonth()+1)}${pad(d.getUTCDate())}`,
+        time: `${pad(d.getUTCHours())}00`
+      };
+    }
+    function kmaWeather(sky, pty){
+      const p = String(pty ?? '0');
+      if(p === '1') return {emoji:'🌧️', text:'비'};
+      if(p === '2') return {emoji:'🌨️', text:'비/눈'};
+      if(p === '3') return {emoji:'❄️', text:'눈'};
+      if(p === '5') return {emoji:'🌦️', text:'빗방울'};
+      if(p === '6') return {emoji:'🌨️', text:'빗방울/눈날림'};
+      if(p === '7') return {emoji:'❄️', text:'눈날림'};
+      const s = String(sky ?? '1');
+      if(s === '1') return {emoji:'☀️', text:'맑음'};
+      if(s === '3') return {emoji:'⛅', text:'구름많음'};
+      if(s === '4') return {emoji:'☁️', text:'흐림'};
+      return {emoji:'🌤️', text:'날씨'};
+    }
+    function hasValue(v){ return v !== undefined && v !== null && v !== '' && String(v) !== 'undefined'; }
+
+    async function fetchAirQuality(lat, lon){
+      const aurl = new URL('https://air-quality-api.open-meteo.com/v1/air-quality');
+      aurl.searchParams.set('latitude', lat); aurl.searchParams.set('longitude', lon);
+      aurl.searchParams.set('hourly', 'pm10,pm2_5'); aurl.searchParams.set('timezone', 'Asia/Seoul'); aurl.searchParams.set('past_days','1'); aurl.searchParams.set('forecast_days','1');
+      const ar = await fetch(aurl); const a = await ar.json();
+      const idx = bestAirIndex(a.hourly?.time || []);
+      return {pm10: Math.round(a.hourly?.pm10?.[idx] ?? 0), pm25: Math.round(a.hourly?.pm2_5?.[idx] ?? 0)};
+    }
+    function bestAirIndex(times){
+      const nowHour = new Date().toLocaleString('sv-SE', {timeZone:'Asia/Seoul'}).replace(' ','T').slice(0,13);
+      const found = times.findIndex(t => String(t).slice(0,13) === nowHour);
+      return found >= 0 ? found : Math.max(0, times.length - 1);
+    }
+    function gradePM10(v){ if(!v) return '확인중'; if(v<=30) return '좋음'; if(v<=80) return '보통'; if(v<=150) return '나쁨'; return '매우나쁨'; }
+    function gradePM25(v){ if(!v) return '확인중'; if(v<=15) return '좋음'; if(v<=35) return '보통'; if(v<=75) return '나쁨'; return '매우나쁨'; }
+
+    // 기상청 격자 변환 공식(Lambert Conformal Conic)
+    function dfsGrid(lat, lon){
+      const RE = 6371.00877, GRID = 5.0, SLAT1 = 30.0, SLAT2 = 60.0, OLON = 126.0, OLAT = 38.0, XO = 43, YO = 136;
+      const DEGRAD = Math.PI / 180.0;
+      const re = RE / GRID;
+      const slat1 = SLAT1 * DEGRAD;
+      const slat2 = SLAT2 * DEGRAD;
+      const olon = OLON * DEGRAD;
+      const olat = OLAT * DEGRAD;
+      let sn = Math.tan(Math.PI * 0.25 + slat2 * 0.5) / Math.tan(Math.PI * 0.25 + slat1 * 0.5);
+      sn = Math.log(Math.cos(slat1) / Math.cos(slat2)) / Math.log(sn);
+      let sf = Math.tan(Math.PI * 0.25 + slat1 * 0.5);
+      sf = Math.pow(sf, sn) * Math.cos(slat1) / sn;
+      let ro = Math.tan(Math.PI * 0.25 + olat * 0.5);
+      ro = re * sf / Math.pow(ro, sn);
+      let ra = Math.tan(Math.PI * 0.25 + lat * DEGRAD * 0.5);
+      ra = re * sf / Math.pow(ra, sn);
+      let theta = lon * DEGRAD - olon;
+      if(theta > Math.PI) theta -= 2.0 * Math.PI;
+      if(theta < -Math.PI) theta += 2.0 * Math.PI;
+      theta *= sn;
+      return { x: Math.floor(ra * Math.sin(theta) + XO + 0.5), y: Math.floor(ro - ra * Math.cos(theta) + YO + 0.5) };
+    }
+
+    async function fetchMeal(){
+      const ymd = currentYmd();
+      const box = $('mealList'); box.innerHTML = `<div class="mealEmpty">급식 정보를 불러오는 중</div>`;
+      renderBestMeal();
+      try{
+        const url = `https://open.neis.go.kr/hub/mealServiceDietInfo?Type=json&ATPT_OFCDC_SC_CODE=${encodeURIComponent(data.school.office)}&SD_SCHUL_CODE=${encodeURIComponent(data.school.code)}&MLSV_YMD=${ymd}`;
+        const res = await fetch(url); const json = await res.json();
+        const rows = json.mealServiceDietInfo?.[1]?.row || [];
+        const dish = rows[0]?.DDISH_NM || '';
+        const menus = dish.replace(/<br\s*\/?>/gi, '\n').split('\n').map(cleanMenu).filter(Boolean).slice(0, 10);
+        if(menus.length){
+          box.innerHTML = menus.map(m => `<button class="mealChip ${isBestMeal(m) ? 'selected' : ''}" data-menu="${esc(m)}" title="클릭하면 우리반 최고 음식으로 뽑혀요">${esc(m)}</button>`).join('');
+          box.querySelectorAll('.mealChip').forEach(btn => btn.addEventListener('click', () => chooseBestMeal(btn.dataset.menu)));
+        } else {
+          box.innerHTML = `<div class="mealEmpty">오늘 등록된 급식이 없어요</div>`;
+        }
+        renderBestMeal();
+      }catch(e){ box.innerHTML = `<div class="mealEmpty">급식 조회가 안 돼요. 학교 설정을 확인해 주세요.</div>`; renderBestMeal(); }
+    }
+    function currentYmd(){ return new Date().toLocaleDateString('sv-SE', {timeZone:'Asia/Seoul'}).replaceAll('-',''); }
+    function currentSchoolKey(){ return `${data.school?.office || ''}-${data.school?.code || ''}`; }
+    function isBestMeal(menu){ return data.bestMeal?.date === currentYmd() && data.bestMeal?.school === currentSchoolKey() && data.bestMeal?.text === menu; }
+    function chooseBestMeal(menu){
+      data.bestMeal = {date:currentYmd(), school:currentSchoolKey(), text:menu};
+      save(); renderBestMeal(); fetchMeal();
+    }
+    function renderBestMeal(){
+      const el = $('bestMealText'); if(!el) return;
+      const best = data.bestMeal;
+      el.textContent = best?.date === currentYmd() && best?.school === currentSchoolKey() && best?.text ? best.text : '메뉴를 클릭해 뽑아 주세요';
+    }
+    function cleanMenu(s){ return s.replace(/\([^)]*\)/g,'').replace(/[0-9.]/g,'').replace(/\s+/g,' ').trim(); }
+    function openSchoolModal(){
+      $('schoolSearchInput').value = data.school?.name || '';
+      $('schoolResults').innerHTML = '<div class="mealEmpty">학교명을 검색해 주세요.</div>';
+      $('schoolModal').classList.add('show');
+      setTimeout(() => $('schoolSearchInput').focus(), 50);
+    }
+    function closeSchoolModal(){ $('schoolModal').classList.remove('show'); }
+
+    async function searchSchoolList(){
+      const q = $('schoolSearchInput').value.trim();
+      const box = $('schoolResults');
+      if(!q){ box.innerHTML = '<div class="mealEmpty">학교명을 입력해 주세요.</div>'; return; }
+      box.innerHTML = '<div class="mealEmpty">학교를 검색하는 중입니다.</div>';
+      try{
+        const url = `https://open.neis.go.kr/hub/schoolInfo?Type=json&pIndex=1&pSize=100&SCHUL_NM=${encodeURIComponent(q)}`;
+        const res = await fetch(url);
+        const json = await res.json();
+        const rows = json.schoolInfo?.[1]?.row || [];
+        if(!rows.length){
+          box.innerHTML = '<div class="mealEmpty">검색 결과가 없어요. 예: 한내초, 한내초등학교</div>';
+          return;
+        }
+        box.innerHTML = rows.map((row, i) => {
+          const region = [row.LCTN_SC_NM, row.ATPT_OFCDC_SC_NM].filter(Boolean).join(' · ');
+          const address = row.ORG_RDNMA || row.ORG_RDNDA || '';
+          return `<button class="schoolResult" data-i="${i}"><div class="schoolName">${esc(row.SCHUL_NM)} <span style="color:var(--accentText);font-size:16px;">${esc(region)}</span></div><div class="schoolMeta">${esc(address)}<br>교육청 ${esc(row.ATPT_OFCDC_SC_CODE)} · 학교코드 ${esc(row.SD_SCHUL_CODE)}</div></button>`;
+        }).join('');
+        box.querySelectorAll('.schoolResult').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const row = rows[Number(btn.dataset.i)];
+            data.school = {name:row.SCHUL_NM, office:row.ATPT_OFCDC_SC_CODE, code:row.SD_SCHUL_CODE};
+            save(); closeSchoolModal(); fetchMeal();
+          });
+        });
+      }catch(e){
+        box.innerHTML = '<div class="mealEmpty">학교 검색이 안 되었어요. 잠시 후 다시 시도해 주세요.</div>';
+      }
+    }
+
+    function openScheduleModal(){
+      const rows = $('scheduleRows');
+      const day = todayKey();
+      rows.innerHTML = (data.slots || DEFAULT_SLOTS).map((slot, i) => {
+        const label = slot.type === 'period' ? `${slot.p}교시` : slot.label;
+        const noteValue = slot.type === 'period' ? getFlowNote(day, slot.p) : (slot.sub || '');
+        const notePlaceholder = slot.type === 'period' ? '학생 이름·활동 내용' : '활동 설명';
+        return `<div class="scheduleRow" data-slot="${i}"><label>${esc(label)}</label><input data-field="s" value="${esc(slot.s)}" maxlength="5" placeholder="시작"><input data-field="e" value="${esc(slot.e)}" maxlength="5" placeholder="끝"><input class="noteInput" data-field="note" value="${esc(noteValue)}" placeholder="${notePlaceholder}"><button class="slotDelete" type="button" title="이 시간 삭제">×</button></div>`;
+      }).join('');
+      rows.querySelectorAll('.slotDelete').forEach(btn => btn.addEventListener('click', () => {
+        if(rows.querySelectorAll('.scheduleRow').length <= 1){ alert('시간은 최소 1개 이상 필요해요.'); return; }
+        btn.closest('.scheduleRow')?.remove();
+      }));
+      $('scheduleModal').classList.add('show');
+    }
+    function closeScheduleModal(){ $('scheduleModal').classList.remove('show'); }
+    function saveScheduleFromModal(){
+      const base = data.slots || DEFAULT_SLOTS;
+      const day = todayKey();
+      ensureFlowNotes();
+      const updated = [];
+      let ok = true;
+      $('scheduleRows').querySelectorAll('.scheduleRow').forEach(row => {
+        const original = structuredClone(base[Number(row.dataset.slot)] || {});
+        const sInput = row.querySelector('input[data-field="s"]');
+        const eInput = row.querySelector('input[data-field="e"]');
+        const noteInput = row.querySelector('input[data-field="note"]');
+        const start = normalizeTime(sInput?.value);
+        const end = normalizeTime(eInput?.value);
+        if(!start || !end) ok = false;
+        original.s = start;
+        original.e = end;
+        const text = (noteInput?.value || '').trim();
+        if(original.type === 'period') data.flowNotes[day][original.p - 1] = text;
+        else original.sub = text;
+        updated.push(original);
+      });
+      if(!ok){ alert('시간은 09:00처럼 입력해 주세요.'); return; }
+      data.slots = updated;
+      save(); closeScheduleModal(); renderFlow(); highlightNowCell(); updateNowCard();
+    }
+    function resetScheduleDefaults(){
+      if(!confirm('시정표와 오늘의 활동 내용을 기본값으로 초기화할까요?')) return;
+      data.slots = structuredClone(DEFAULT_SLOTS);
+      data.flowNotes = structuredClone(DEFAULT.flowNotes);
+      save(); renderFlow(); highlightNowCell(); updateNowCard(); openScheduleModal();
+    }
+    function normalizeTime(value){
+      const v = String(value || '').trim();
+      if(/^\d{1,2}:\d{2}$/.test(v)){
+        const [h,m] = v.split(':').map(Number);
+        if(h>=0 && h<=23 && m>=0 && m<=59) return `${pad(h)}:${pad(m)}`;
+      }
+      if(/^\d{3,4}$/.test(v)){
+        const raw = v.padStart(4,'0');
+        const h = Number(raw.slice(0,2)), m = Number(raw.slice(2));
+        if(h>=0 && h<=23 && m>=0 && m<=59) return `${pad(h)}:${pad(m)}`;
+      }
+      return '';
+    }
+
+    function seoulParts(){
+      const parts = new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',year:'numeric',month:'numeric',day:'numeric',weekday:'short',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).formatToParts(new Date());
+      const m = Object.fromEntries(parts.map(p=>[p.type,p.value]));
+      return {year:m.year, month:m.month, day:m.day, week:m.weekday, hour:m.hour==='24'?'00':m.hour, minute:m.minute, second:m.second};
+    }
+    function koreanWeekday(){ return new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',weekday:'long'}).format(new Date()); }
+    function todayKey(){
+      const k = new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Seoul',weekday:'short'}).format(new Date()).toLowerCase();
+      return {mon:'mon',tue:'tue',wed:'wed',thu:'thu',fri:'fri'}[k] || 'mon';
+    }
+    function currentSlot(){ const n=nowMin(); return (data.slots || DEFAULT_SLOTS).find(x => n >= min(x.s) && n < min(x.e)); }
+    function nowMin(){ const p=seoulParts(); return Number(p.hour)*60 + Number(p.minute); }
+    function min(t){ const [h,m]=t.split(':').map(Number); return h*60+m; }
+    function isCurrent(slot){ const c=currentSlot(); return c && c.s===slot.s && c.e===slot.e; }
+    function pad(n){ return String(n).padStart(2,'0'); }
+    function esc(s){ return String(s ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;'); }
+
+
+
+    function printDailyWorksheet(){
+      openPrintableWorksheetsAll();
+    }
+
+    function getWorksheetData(){
+      const now = seoulParts();
+      const dateText = `${now.year}년 ${now.month}월 ${now.day}일 ${now.week}`;
+      const className = data.title || '우리 반';
+      const best = data.bestMeal?.date === currentYmd() && data.bestMeal?.school === currentSchoolKey() && data.bestMeal?.text
+        ? data.bestMeal.text
+        : '';
+      const weatherMain = $('weatherText')?.textContent?.trim() || '';
+      const temp = $('tempText')?.textContent?.trim() || '';
+      const weatherPhrase = [weatherMain, temp].filter(v => v && !v.includes('조회') && v !== '--℃').join(' · ');
+      const menuItems = Array.from(document.querySelectorAll('.mealChip')).map(b => b.textContent.trim()).filter(Boolean);
+      return {
+        dateText,
+        className,
+        best,
+        weatherPhrase: weatherPhrase || '오늘 날씨',
+        menuItems,
+        learningWord: (data.learningWord || '').trim() || '오늘의 배움 단어'
+      };
+    }
+
+    function buildWorksheetPage(level, info){
+      const best = info.best;
+      const menuHtml = info.menuItems.length
+        ? info.menuItems.map(name => `<div class="menuOption ${name === best ? 'best' : ''}"><span class="colorBox"></span><span>${esc(name)}</span>${name === best ? '<b>우리반 최고</b>' : ''}</div>`).join('')
+        : '<div class="emptyMenu">오늘 급식 메뉴를 보고 써 보세요.</div>';
+      const isAdvanced = level === 'advanced';
+      const wordSection = isAdvanced ? `
+    <div class="section wordSection">
+      <h2>💡 오늘의 배움 단어</h2>
+      <div class="seeBox">${esc(info.learningWord)}</div>
+      <div class="answerLine"><span>배움 단어</span></div>
+      <div class="answerLine sentenceLine"><span>문장 만들기</span></div>
+      <div class="answerLine sentenceLine"><span>문장 이어 쓰기</span></div>
+      <div class="answerLine sentenceLine long"><span>문장 한 번 더 쓰기</span></div>
+    </div>` : `
+    <div class="section wordSection">
+      <h2>💡 배움 단어 따라쓰기</h2>
+      <div class="trace bigTrace basicTrace">${esc(info.learningWord)}</div>
+      <div class="writeLine tallLine"></div>
+      <div class="smallGuide">오늘 배운 단어를 천천히 따라 쓰고 읽어 봐요.</div>
+    </div>`;
+      const weatherSection = isAdvanced ? `
+    <div class="section weatherSection">
+      <h2>🌤 오늘 날씨와 마음 날씨</h2>
+      <div class="seeBox">오늘 날씨: ${esc(info.weatherPhrase)}</div>
+      <div class="answerLine"><span>오늘 날씨 쓰기</span></div>
+      <div class="answerLine"><span>나의 기분 날씨 쓰기</span></div>
+    </div>` : `
+    <div class="section weatherSection">
+      <h2>🌤 오늘 날씨 따라쓰기</h2>
+      <div class="trace bigTrace basicTrace">${esc(info.weatherPhrase)}</div>
+      <div class="writeLine tallLine"></div>
+      <div class="smallGuide">전광판에 나온 오늘 날씨를 보고 천천히 따라 써요.</div>
+    </div>`;
+      return `
+  <section class="sheet ${isAdvanced ? 'advancedSheet' : 'basicSheet'}">
+    <div class="title">
+      <h1>🍎 오늘 하루 한 장</h1>
+      <div class="class">${esc(info.className)}</div>
+    </div>
+    <div class="meta">
+      <div class="box"><div class="label">날짜</div><div class="line">${esc(info.dateText)}</div></div>
+      <div class="box"><div class="label">이름</div><div class="line"></div></div>
+    </div>
+    <div class="section mealSection">
+      <h2>🍱 오늘 급식 메뉴 색칠</h2>
+      <div class="smallGuide">우리반 최고의 음식과 내가 좋아하는 음식에 색칠해요.</div>
+      <div class="menuGrid">${menuHtml}</div>
+      <div class="twoLines">
+        <div><div class="label">우리반 최고의 음식</div><div class="miniWrite">${esc(best)}</div></div>
+        <div><div class="label">내가 좋아하는 음식</div><div class="miniWrite"></div></div>
+      </div>
+    </div>
+    ${wordSection}
+    ${weatherSection}
+    ${isAdvanced ? '' : `
+    <div class="section moodSection">
+      <h2>😊 오늘 내 기분 표시하기</h2>
+      <div class="moodGrid">
+        <div class="moodBox"><div class="moodEmoji">😄</div><div>좋아요</div></div>
+        <div class="moodBox"><div class="moodEmoji">🙂</div><div>괜찮아요</div></div>
+        <div class="moodBox"><div class="moodEmoji">😐</div><div>보통이에요</div></div>
+        <div class="moodBox"><div class="moodEmoji">😢</div><div>힘들어요</div></div>
+      </div>
+    </div>`}
+    <div class="teacherCheck"><span>교사 확인</span><div class="teacherStamp"></div></div>
+    <div class="footer">전광판에서 만든 활동지입니다.</div>
+  </section>`;
+    }
+
+    function openPrintableWorksheetsAll(){
+      const info = getWorksheetData();
+      const printWin = window.open('', '_blank', 'width=900,height=1100');
+      if(!printWin){ alert('팝업이 차단되었어요. 브라우저에서 팝업 허용 후 다시 눌러 주세요.'); return; }
+      const basicPage = buildWorksheetPage('basic', info);
+      const advancedPage = buildWorksheetPage('advanced', info);
+      const html = `<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>오늘 하루 한 장</title>
+<style>
+  @page { size: A4 portrait; margin: 6mm; }
+  * { box-sizing: border-box; }
+  body { margin:0; color:#1f2d35; font-family:"Arial", "Noto Sans KR", sans-serif; background:#fff; }
+  .sheet { width:100%; min-height: calc(297mm - 12mm); padding:0; break-after:page; page-break-after:always; }
+  .sheet:last-child { break-after:auto; page-break-after:auto; }
+  .title { display:flex; justify-content:space-between; align-items:flex-end; gap:8px; border-bottom:3px solid #222; padding-bottom:6px; margin-bottom:7px; }
+  .title h1 { margin:0; font-size:22px; letter-spacing:-1px; }
+  .class { font-size:12px; font-weight:800; color:#555; text-align:right; }
+  .meta { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:7px; }
+  .box { border:2.3px solid #222; border-radius:13px; padding:7px 11px; min-height:52px; }
+  .label { font-size:15px; font-weight:900; margin-bottom:3px; }
+  .line { height:26px; border-bottom:2.3px solid #222; font-size:19px; font-weight:900; display:flex; align-items:flex-end; padding-bottom:2px; }
+  .section { border:2.3px solid #222; border-radius:15px; padding:8px 11px; margin-top:7px; break-inside:avoid; page-break-inside:avoid; }
+  .section h2 { margin:0 0 5px; font-size:19px; letter-spacing:-.8px; }
+  .trace { min-height:34px; border-radius:12px; border:1.8px dashed #bbb; background:#fafafa; display:flex; align-items:center; padding:6px 12px; font-weight:900; color:#b7b7b7; letter-spacing:.5px; }
+  .bigTrace { min-height:48px; font-size:34px; }
+  .basicTrace { font-size:37px; min-height:56px; color:#b2b2b2; }
+  .writeLine { height:29px; border-bottom:3px solid #222; margin-top:5px; }
+  .tallLine { height:38px; }
+  .smallGuide { font-size:12px; color:#555; font-weight:700; margin-top:3px; }
+  .menuGrid { display:grid; grid-template-columns:1fr 1fr; gap:5px; margin-top:5px; }
+  .menuOption { min-height:28px; border:1.7px solid #222; border-radius:10px; padding:3px 7px; display:grid; grid-template-columns:20px 1fr auto; align-items:center; gap:6px; font-size:14px; font-weight:900; }
+  .menuOption.best { background:#fff6dc; }
+  .menuOption b { font-size:10px; color:#a45a00; white-space:nowrap; }
+  .colorBox { width:18px; height:18px; border:2px solid #222; border-radius:5px; display:inline-block; }
+  .emptyMenu { border:1.7px dashed #aaa; border-radius:10px; padding:7px; font-size:14px; color:#777; font-weight:800; }
+  .twoLines { display:grid; grid-template-columns:1fr 1fr; gap:9px; margin-top:7px; }
+  .miniWrite { height:29px; border-bottom:3px solid #222; font-size:16px; font-weight:900; display:flex; align-items:flex-end; }
+  .seeBox { min-height:33px; border:1.7px solid #222; border-radius:10px; padding:6px 10px; font-size:18px; font-weight:900; background:#fff9ec; }
+  .answerLine { height:34px; border-bottom:3px solid #222; margin-top:6px; display:flex; align-items:flex-end; }
+  .answerLine.long { height:42px; }
+  .answerLine.sentenceLine { height:48px; }
+  .advancedSheet .answerLine.sentenceLine { height:56px; }
+  .answerLine span { color:#777; font-size:13px; font-weight:900; padding-bottom:3px; }
+  .moodGrid { display:grid; grid-template-columns:repeat(4, 1fr); gap:5px; margin-top:4px; }
+  .moodBox { border:1.7px solid #222; border-radius:10px; min-height:42px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; font-size:11px; font-weight:900; }
+  .moodEmoji { font-size:23px; line-height:1; }
+  .drawBox { min-height:45px; border:1.7px dashed #999; border-radius:12px; margin-top:5px; padding:7px; font-size:12px; color:#777; font-weight:800; }
+  .teacherCheck { margin-top:6px; display:flex; justify-content:flex-end; align-items:center; gap:8px; font-size:12px; font-weight:900; color:#333; }
+  .teacherStamp { width:82px; height:30px; border:2px solid #222; border-radius:8px; background:#fff; }
+  .footer { margin-top:4px; font-size:9px; color:#666; text-align:center; }
+  @media print { .noPrint { display:none; } body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
+
+
+  /* v1.17: A4 한 장 안에서 빈 여백이 덜 남도록 세로 비율 재조정 */
+  @page { size: A4 portrait; margin: 5mm; }
+  .sheet {
+    height:calc(297mm - 10mm);
+    min-height:0;
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+    gap:5px;
+  }
+  .title { margin-bottom:5px; padding-bottom:5px; }
+  .meta { margin-bottom:5px; }
+  .box { min-height:50px; padding:6px 10px; }
+  .section { margin-top:0; padding:8px 11px; }
+  .mealSection { flex:0 0 auto; }
+  .basicSheet .wordSection,
+  .basicSheet .weatherSection {
+    flex:1 1 0;
+    display:flex;
+    flex-direction:column;
+    min-height:0;
+  }
+  .basicSheet .tallLine { flex:1 1 auto; min-height:42px; }
+  .moodSection {
+    flex:0 0 auto;
+    display:flex;
+    flex-direction:column;
+    min-height:0;
+  }
+  .advancedSheet .wordSection {
+    flex:1 1 auto;
+    display:flex;
+    flex-direction:column;
+    min-height:0;
+  }
+  .advancedSheet .weatherSection { flex:0 0 auto; }
+  .advancedSheet .answerLine.sentenceLine { height:auto; flex:1 1 52px; min-height:52px; }
+  .advancedSheet .answerLine.long { height:auto; flex:1 1 56px; min-height:56px; }
+  .teacherCheck {
+    margin-top:4px;
+    min-height:64px;
+    padding:6px 10px;
+    border:2.4px solid #222;
+    border-radius:12px;
+    background:#fff;
+    font-size:16px;
+    font-weight:950;
+    flex:0 0 auto;
+  }
+  .teacherStamp {
+    width:56px;
+    height:56px;
+    border:2.8px solid #222;
+    border-radius:8px;
+    background:#fff;
+  }
+  .footer { margin-top:0; flex:0 0 auto; }
+  @media print {
+    .sheet { height:calc(297mm - 10mm); }
+  }
+</style>
+</head>
+<body>
+${basicPage}
+${advancedPage}
+<script>window.onload = () => { setTimeout(() => { window.focus(); window.print(); }, 250); };<\/script>
+</body>
+</html>`;
+      printWin.document.open();
+      printWin.document.write(html);
+      printWin.document.close();
+    }
+
+    function openDailyActivityPage(){
+      const now = seoulParts();
+      const dateText = `${now.year}년 ${now.month}월 ${now.day}일 ${now.week}`;
+      const className = data.title || '우리 반';
+      const best = data.bestMeal?.date === currentYmd() && data.bestMeal?.school === currentSchoolKey() && data.bestMeal?.text
+        ? data.bestMeal.text
+        : '';
+      const weatherMain = $('weatherText')?.textContent?.trim() || '';
+      const temp = $('tempText')?.textContent?.trim() || '';
+      const weatherPhrase = [weatherMain, temp].filter(v => v && !v.includes('조회') && v !== '--℃').join(' · ') || '오늘 날씨를 써 보세요';
+      const menuItems = Array.from(document.querySelectorAll('.mealChip')).map(b => b.textContent.trim()).filter(Boolean);
+      const learningWord = (data.learningWord || '').trim() || '오늘의 배움 단어를 써 보세요';
+      const menuHtml = menuItems.length
+        ? menuItems.map(name => `<button class="menuCard ${name === best ? 'best' : ''}" type="button" data-menu="${esc(name)}"><span class="paintBox"></span><span>${esc(name)}</span>${name === best ? '<b>우리반 최고</b>' : ''}</button>`).join('')
+        : '<div class="emptyMenu">오늘 급식 메뉴를 보고 써 보세요.</div>';
+      const activityWin = window.open('', '_blank', 'width=980,height=760');
+      if(!activityWin){ alert('팝업이 차단되었어요. 브라우저에서 팝업 허용 후 다시 눌러 주세요.'); return; }
+      const html = `<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>오늘 하루 한 장 활동</title>
+<style>
+  * { box-sizing:border-box; }
+  html, body { margin:0; min-height:100%; font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",Arial,sans-serif; color:#1f2d35; background:#f7efe2; }
+  body { overflow:auto; }
+  .page { min-height:100vh; padding:18px; display:flex; flex-direction:column; gap:14px; }
+  .top { position:sticky; top:0; z-index:5; background:rgba(247,239,226,.94); backdrop-filter:blur(10px); border:1px solid rgba(31,45,53,.10); border-radius:24px; padding:12px 14px; display:grid; grid-template-columns:auto auto 1fr auto; gap:12px; align-items:center; box-shadow:0 10px 24px rgba(0,0,0,.10); }
+  .back, .printNow { border:0; border-radius:999px; padding:12px 18px; background:#223036; color:white; font-size:20px; font-weight:950; cursor:pointer; white-space:nowrap; }
+  .printNow { background:#b9630d; }
+  .title { min-width:0; }
+  h1 { margin:0; font-size:32px; line-height:1; letter-spacing:-.055em; }
+  .className { margin-top:5px; color:#6d747a; font-weight:900; font-size:15px; }
+  .date { font-size:20px; font-weight:950; color:#b9630d; white-space:nowrap; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .card { background:rgba(255,255,255,.86); border:1px solid rgba(31,45,53,.12); border-radius:24px; padding:16px; box-shadow:0 10px 26px rgba(40,30,18,.10); min-width:0; }
+  .card h2 { margin:0 0 10px; font-size:24px; letter-spacing:-.04em; }
+  .nameRow { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  label { display:block; font-size:18px; font-weight:950; margin-bottom:8px; }
+  input[type="text"] { width:100%; height:52px; border:2px solid #1f2d35; border-radius:15px; padding:0 14px; font-size:24px; font-weight:900; background:#fff; }
+  .touchWrite { width:100%; min-height:74px; resize:vertical; border:2px solid #1f2d35; border-radius:16px; padding:12px 14px; font-size:25px; line-height:1.25; font-weight:900; background:#fff; font-family:inherit; }
+  .touchWrite:focus, input[type="text"]:focus { outline:4px solid rgba(255,159,67,.28); }
+  .writeGuide { margin:8px 0 5px; font-size:16px; color:#6d747a; font-weight:950; }
+  .keyboardHint { margin-top:6px; color:#7b858b; font-size:13px; font-weight:850; }
+  .menuGrid { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:10px; }
+  .menuCard { border:2px solid #233036; border-radius:16px; background:#fffaf0; min-height:58px; padding:8px; display:grid; grid-template-columns:34px 1fr auto; gap:8px; align-items:center; text-align:left; font-size:20px; font-weight:950; cursor:pointer; }
+  .menuCard b { font-size:13px; color:#b9630d; white-space:nowrap; }
+  .menuCard.selected, .menuCard.best.selected { background:#ffe08a; box-shadow:0 0 0 5px rgba(255,224,138,.38); }
+  .menuCard.best { background:#fff0c9; }
+  .paintBox { width:32px; height:32px; border:3px solid #233036; border-radius:9px; background:#fff; }
+  .menuCard.selected .paintBox { background:linear-gradient(135deg,#ff8fb5,#ffd86a,#8be2b3); }
+  .emptyMenu { border:2px dashed #aaa; border-radius:16px; padding:14px; color:#777; font-size:20px; font-weight:900; }
+  .traceWord { min-height:56px; border:2px dashed #b7b7b7; border-radius:16px; background:#fff; padding:10px 14px; font-size:32px; font-weight:950; color:#b7b7b7; display:flex; align-items:center; }
+  .canvasBox { margin-top:10px; border:3px solid #233036; border-radius:18px; overflow:hidden; background:#fff; touch-action:none; }
+  canvas { display:block; width:100%; height:170px; touch-action:none; background:#fff; }
+  .toolLine { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; align-items:center; }
+  .smallBtn { border:0; border-radius:999px; padding:9px 12px; background:#ffe5af; color:#7a3f00; font-weight:950; font-size:16px; cursor:pointer; }
+  .moodGrid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+  .mood { border:2px solid #233036; background:#fff; border-radius:18px; min-height:92px; font-size:38px; font-weight:950; cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px; }
+  .mood span { font-size:14px; }
+  .mood.selected { background:#dff6e8; box-shadow:0 0 0 5px rgba(86,191,140,.24); }
+  .full { grid-column:1 / -1; }
+  .teacherCheckCard { display:grid; grid-template-columns:1fr 82px; align-items:center; gap:12px; justify-content:end; }
+  .teacherCheckCard h2 { margin:0; }
+  .teacherLine { width:78px; height:78px; border:3px solid #233036; border-radius:12px; display:flex; align-items:center; justify-content:center; text-align:center; font-size:15px; line-height:1.15; font-weight:950; color:#6d747a; background:#fff; justify-self:end; }
+  .footer { text-align:center; color:#8b8b8b; font-size:12px; font-weight:800; padding:4px 0 10px; }
+  @media print {
+    @page { size:A4 portrait; margin:8mm; }
+    html, body { background:#fff; }
+    .page { padding:0; gap:8px; }
+    .top { position:static; box-shadow:none; border:0; border-bottom:3px solid #222; border-radius:0; background:#fff; padding:0 0 7px; grid-template-columns:1fr auto; }
+    .back, .printNow, .toolLine { display:none !important; }
+    .card { box-shadow:none; border:2px solid #222; break-inside:avoid; page-break-inside:avoid; padding:11px; }
+    .grid { gap:8px; }
+    canvas { height:120px !important; }
+    .canvasBox { border:2px solid #222; }
+    .date { color:#1f2d35; }
+    .footer { padding-top:0; }
+  }
+  @media (max-width:760px){ .page{padding:10px}.top{grid-template-columns:1fr;}.date{white-space:normal}.grid{grid-template-columns:1fr}.teacherCheckCard{grid-template-columns:1fr} h1{font-size:28px}.menuGrid{grid-template-columns:1fr}.nameRow{grid-template-columns:1fr} canvas{height:150px} }
+
+
+  /* v1.17: 디지털 활동 화면은 유지하고, 출력할 때만 A4 한 장에 더 안정적으로 맞춤 */
+  @media print {
+    @page { size:A4 portrait; margin:5mm; }
+    html, body { width:210mm; height:297mm; overflow:hidden; }
+    .page {
+      width:200mm;
+      height:287mm;
+      min-height:0;
+      padding:0;
+      gap:4px;
+      overflow:hidden;
+    }
+    .top {
+      min-height:0;
+      padding:0 0 5px;
+      margin:0;
+      display:grid;
+      grid-template-columns:1fr auto;
+      gap:5px;
+      align-items:end;
+    }
+    .top .title h1 { font-size:22px; line-height:1; }
+    .className { font-size:11px; }
+    .date { font-size:16px; }
+    .card { padding:6px 8px !important; border-radius:10px; }
+    .card h2 { font-size:15px; margin:0 0 4px; line-height:1.05; }
+    .nameRow { gap:6px; }
+    label { font-size:11px; margin-bottom:2px; }
+    input { height:26px; border-width:2px; border-radius:8px; font-size:16px; padding:0 8px; }
+    .touchWrite { min-height:34px; border-width:2px; border-radius:8px; font-size:13px; padding:4px 7px; line-height:1.15; }
+    .writeGuide { margin:3px 0 2px; font-size:10px; }
+    .keyboardHint { display:none; }
+    .grid {
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:5px;
+      align-items:start;
+    }
+    .menuGrid { grid-template-columns:1fr 1fr; gap:4px; }
+    .menuCard { min-height:31px; border-width:1.7px; border-radius:8px; padding:4px 6px; gap:5px; font-size:13px; }
+    .paintBox { width:18px; height:18px; border-width:2px; border-radius:5px; }
+    .traceWord { min-height:30px; padding:4px 8px; border-radius:9px; font-size:17px; }
+    .canvasBox { margin-top:5px; border-width:2px; border-radius:9px; }
+    canvas { height:74px !important; }
+    .moodGrid { grid-template-columns:repeat(4,1fr); gap:4px; }
+    .mood { min-height:46px; border-width:1.8px; border-radius:10px; font-size:22px; gap:0; }
+    .mood span { font-size:9px; }
+    .teacherCheckCard { grid-template-columns:1fr 50px; gap:6px; }
+    .teacherLine { width:48px; height:48px; border-width:2px; border-radius:7px; font-size:10px; }
+    .footer { font-size:10px; padding:1px 0 0; }
+  }
+</style>
+</head>
+<body>
+  <div class="page">
+    <div class="top">
+      <button class="back" id="backBtn">← 돌아가기</button>
+      <button class="printNow" id="printActivityBtn">🖨 출력</button>
+      <div class="title"><h1>🍎 오늘 하루 한 장</h1><div class="className">${esc(className)} · 활동 페이지</div></div>
+      <div class="date">${esc(dateText)}</div>
+    </div>
+
+    <div class="card">
+      <div class="nameRow">
+        <div><label>날짜</label><input type="text" value="${esc(dateText)}" inputmode="text" autocomplete="off" /></div>
+        <div><label>이름</label><input type="text" placeholder="내 이름 쓰기" inputmode="text" autocomplete="off" /></div>
+      </div>
+    </div>
+
+    <div class="grid">
+      <section class="card">
+        <h2>🍱 오늘 급식 메뉴 색칠</h2>
+        <div class="menuGrid">${menuHtml}</div>
+        <div class="toolLine"><button class="smallBtn" id="menuClear">색칠 지우기</button></div>
+      </section>
+
+      <section class="card">
+        <h2>🏆 우리반 최고의 음식 / 내가 좋아하는 음식</h2>
+        <label>우리반 최고의 음식</label><input type="text" value="${esc(best)}" placeholder="우리반 최고의 음식" inputmode="text" autocomplete="off" />
+        <div style="height:10px"></div>
+        <label>내가 좋아하는 음식</label><input type="text" placeholder="내가 좋아하는 음식을 써 보세요" inputmode="text" autocomplete="off" />
+      </section>
+
+      <section class="card">
+        <h2>💡 배움 단어 쓰기</h2>
+        <div class="traceWord">${esc(learningWord)}</div>
+        <div class="writeGuide">자판으로 쓰기</div>
+        <textarea class="touchWrite" inputmode="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="배움 단어를 입력하세요"></textarea>
+        <div class="keyboardHint">스마트폰·태블릿은 이 칸을 터치하면 자판이 열립니다.</div>
+        <div class="writeGuide">손가락이나 펜으로 쓰기</div>
+        <div class="canvasBox"><canvas class="drawCanvas" data-name="word"></canvas></div>
+        <div class="toolLine"><button class="smallBtn clearCanvas">손글씨 지우기</button></div>
+      </section>
+
+      <section class="card">
+        <h2>🌤 오늘 날씨 쓰기</h2>
+        <div class="traceWord">${esc(weatherPhrase)}</div>
+        <div class="writeGuide">자판으로 쓰기</div>
+        <textarea class="touchWrite" inputmode="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="오늘 날씨를 입력하세요"></textarea>
+        <div class="keyboardHint">스마트폰·태블릿은 이 칸을 터치하면 자판이 열립니다.</div>
+        <div class="writeGuide">손가락이나 펜으로 쓰기</div>
+        <div class="canvasBox"><canvas class="drawCanvas" data-name="weather"></canvas></div>
+        <div class="toolLine"><button class="smallBtn clearCanvas">손글씨 지우기</button></div>
+      </section>
+
+      <section class="card">
+        <h2>😊 오늘 내 기분 표시하기</h2>
+        <div class="moodGrid">
+          <button class="mood" type="button">😄<span>좋아요</span></button>
+          <button class="mood" type="button">🙂<span>괜찮아요</span></button>
+          <button class="mood" type="button">😐<span>보통이에요</span></button>
+          <button class="mood" type="button">😢<span>힘들어요</span></button>
+        </div>
+      </section>
+
+      <section class="card full teacherCheckCard">
+        <h2>✅ 교사 확인</h2>
+        <div class="teacherLine">선생님 확인</div>
+      </section>
+    </div>
+    <div class="footer">제작 · 수다쟁이 여니쌤</div>
+  </div>
+  <script>
+    function resizeCanvas(canvas){
+      const ratio = Math.max(window.devicePixelRatio || 1, 1);
+      const rect = canvas.getBoundingClientRect();
+      const old = canvas.toDataURL();
+      canvas.width = Math.max(1, Math.floor(rect.width * ratio));
+      canvas.height = Math.max(1, Math.floor(rect.height * ratio));
+      const ctx = canvas.getContext('2d');
+      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.lineWidth = 6; ctx.strokeStyle = '#233036';
+      if(old && old.length > 100){ const img = new Image(); img.onload = () => ctx.drawImage(img,0,0,rect.width,rect.height); img.src = old; }
+    }
+    function setupCanvas(canvas){
+      resizeCanvas(canvas);
+      const ctx = canvas.getContext('2d');
+      let drawing = false;
+      function pos(e){ const r = canvas.getBoundingClientRect(); return {x:e.clientX-r.left, y:e.clientY-r.top}; }
+      canvas.addEventListener('pointerdown', e => { drawing = true; canvas.setPointerCapture(e.pointerId); const p=pos(e); ctx.beginPath(); ctx.moveTo(p.x,p.y); e.preventDefault(); });
+      canvas.addEventListener('pointermove', e => { if(!drawing) return; const p=pos(e); ctx.lineTo(p.x,p.y); ctx.stroke(); e.preventDefault(); });
+      canvas.addEventListener('pointerup', () => drawing = false);
+      canvas.addEventListener('pointercancel', () => drawing = false);
+    }
+    document.querySelectorAll('.drawCanvas').forEach(setupCanvas);
+    window.addEventListener('resize', () => document.querySelectorAll('.drawCanvas').forEach(resizeCanvas));
+    document.querySelectorAll('.clearCanvas').forEach(btn => btn.addEventListener('click', () => {
+      const canvas = btn.closest('.card').querySelector('canvas');
+      const ctx = canvas.getContext('2d');
+      const rect = canvas.getBoundingClientRect();
+      ctx.clearRect(0,0,rect.width,rect.height);
+    }));
+    document.querySelectorAll('.menuCard').forEach(btn => btn.addEventListener('click', () => btn.classList.toggle('selected')));
+    const menuClear = document.getElementById('menuClear');
+    if(menuClear) menuClear.addEventListener('click', () => document.querySelectorAll('.menuCard.selected').forEach(b => b.classList.remove('selected')));
+    document.querySelectorAll('.mood').forEach(btn => btn.addEventListener('click', () => { document.querySelectorAll('.mood').forEach(b => b.classList.remove('selected')); btn.classList.add('selected'); }));
+    document.getElementById('printActivityBtn').addEventListener('click', () => { window.focus(); setTimeout(() => window.print(), 80); });
+    document.getElementById('backBtn').addEventListener('click', () => { window.close(); setTimeout(() => history.back(), 150); });
+  <\/script>
+</body>
+</html>`;
+      activityWin.document.open();
+      activityWin.document.write(html);
+      activityWin.document.close();
+    }
+
+    async function saveJpg(){
+      document.body.classList.add('capture');
+      await new Promise(r => setTimeout(r, 60));
+      try{
+        document.querySelectorAll('input').forEach(i => i.setAttribute('value', i.value));
+        const board = $('board');
+        const clone = board.cloneNode(true);
+        clone.style.transform = 'none'; clone.style.position='static'; clone.style.left='0'; clone.style.top='0';
+        const css = Array.from(document.styleSheets).map(s => { try { return Array.from(s.cssRules).map(r=>r.cssText).join('\n'); } catch(e){ return ''; } }).join('\n');
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${DESIGN_W}" height="${DESIGN_H}"><foreignObject width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml"><style>${css}</style>${new XMLSerializer().serializeToString(clone)}</div></foreignObject></svg>`;
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas'); canvas.width=DESIGN_W*2; canvas.height=DESIGN_H*2;
+          const ctx = canvas.getContext('2d'); ctx.scale(2,2); ctx.fillStyle=getComputedStyle(document.body).backgroundColor; ctx.fillRect(0,0,DESIGN_W,DESIGN_H); ctx.drawImage(img,0,0);
+          const a = document.createElement('a'); a.href = canvas.toDataURL('image/jpeg', .95); a.download = `우리반_스마트전광판_${new Date().toISOString().slice(0,10)}.jpg`; a.click();
+        };
+        img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+      }catch(e){ alert('JPG 저장이 안 되었어요. 브라우저에서 화면 캡처를 사용해 주세요.'); }
+      finally{ setTimeout(()=>document.body.classList.remove('capture'), 200); }
+    }
+  </script>
+
+</body>
+</html>
